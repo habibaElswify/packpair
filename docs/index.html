@@ -567,6 +567,26 @@ document.getElementById("btn-submit-ratings").addEventListener("click", () => {
   document.getElementById("step4").classList.remove("disabled");
   document.getElementById("step4").scrollIntoView({behavior: "smooth", block: "start"});
 });
+
+// Auto-walk all 4 steps for screenshot / share-link use: append ?demo=1
+if (new URLSearchParams(window.location.search).get("demo") === "1") {
+  ["frontend", "ml", "python"].forEach(v => document.querySelector(`#chips-skills .chip[data-v="${v}"]`).click());
+  ["ai", "nlp"].forEach(v => document.querySelector(`#chips-topics .chip[data-v="${v}"]`).click());
+  ["0", "2", "3"].forEach(v => document.querySelector(`#chips-avail .chip[data-v="${v}"]`).click());
+  document.querySelector(`#chips-comm .chip[data-v="async"]`).click();
+  document.getElementById("btn-find").click();
+  document.getElementById("btn-finish").click();
+  // Star ratings for each teammate × 3 dims
+  const sampleRatings = [5, 4, 5, 4, 5, 4, 3, 4, 4];
+  const starGroups = document.querySelectorAll("#rate-area .stars");
+  starGroups.forEach((g, i) => {
+    const n = sampleRatings[i % sampleRatings.length];
+    g.children[n - 1].click();
+  });
+  document.getElementById("btn-submit-ratings").click();
+  // Scroll back up for a comprehensive screenshot
+  setTimeout(() => window.scrollTo(0, 0), 100);
+}
 </script>
 
 </body>
