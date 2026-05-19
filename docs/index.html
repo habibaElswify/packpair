@@ -87,42 +87,98 @@
   .btn.gold:hover { background: var(--uw-gold); color: white; }
   .btn:disabled { background: #ccc; cursor: not-allowed; }
 
-  .teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 12px; }
+  /* Matches view (Step 2) — restored polish from Wk 1 mockup */
+  .match-hero {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin: 8px 0 6px;
+  }
+  .match-hero h3 {
+    margin: 0; font-size: 22px; color: var(--uw-purple-dark); font-weight: 700;
+  }
+  .match-hero .sub { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+  .ai-badge {
+    background: var(--good); color: white; font-size: 12px; font-weight: 700;
+    padding: 5px 12px; border-radius: 999px; letter-spacing: 0.2px;
+  }
+  .meta-row {
+    display: flex; gap: 10px; font-size: 13px; color: var(--ink-soft);
+    margin: 12px 0 16px; flex-wrap: wrap;
+  }
+  .meta-row .mc {
+    background: white; border: 1px solid var(--line); padding: 6px 12px; border-radius: 8px;
+  }
+  .meta-row .mc b { color: var(--uw-purple-dark); }
+
+  .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px; }
+  @media (max-width: 720px) { .teams { grid-template-columns: 1fr; } }
   .team {
-    background: var(--card); border: 1.5px solid var(--line); border-radius: 12px;
-    padding: 14px 16px;
+    background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
+    padding: 16px 18px; box-shadow: 0 1px 0 rgba(75,46,131,0.04);
   }
   .team.mine { border-color: var(--uw-gold-bright); background: linear-gradient(180deg, #fffdf2 0%, white 60%); }
-  .team h3 { margin: 0 0 8px; font-size: 14px; color: var(--uw-purple-dark); display: flex; align-items: center; gap: 8px; }
-  .team h3 .badge {
+  .team h3 {
+    margin: 0 0 6px; font-size: 17px; color: var(--uw-purple-dark);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .team h3 .name-row { display: flex; align-items: center; gap: 8px; }
+  .team h3 .you-badge {
     background: var(--uw-gold-bright); color: var(--uw-purple-dark);
     padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
   }
-  .member {
-    display: flex; align-items: center; gap: 8px; padding: 6px 0;
-    border-top: 1px dashed var(--line); font-size: 13px;
+  .team h3 .score-pill {
+    font-size: 12px; font-weight: 700; color: var(--uw-purple);
+    background: var(--uw-purple-soft); padding: 3px 10px; border-radius: 999px;
   }
-  .member:first-of-type { border-top: none; }
-  .avatar {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: var(--uw-purple-soft); color: var(--uw-purple-dark);
+  .members {
+    display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0;
+  }
+  .member-chip {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 13px;
+    background: #f3eff9; padding: 5px 11px 5px 5px; border-radius: 999px;
+  }
+  .member-chip .av {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--uw-purple); color: white;
     display: inline-flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 11px; flex-shrink: 0;
+    font-weight: 700; font-size: 10px;
   }
-  .member .name { flex: 1; }
-  .member .rep {
-    font-size: 11px; padding: 2px 8px; border-radius: 6px;
+  .member-chip .rep-mini {
+    font-size: 10.5px; padding: 1px 6px; border-radius: 5px; margin-left: 2px;
     background: var(--good-soft); color: var(--good); font-weight: 600;
   }
-  .member .rep.low { background: var(--warn-soft); color: var(--warn); }
-  .member .rep.hidden {
-    background: #f3f0fa; color: var(--ink-soft); font-style: italic;
+  .member-chip .rep-mini.low { background: var(--warn-soft); color: var(--warn); }
+  .member-chip .rep-mini.hidden {
+    background: #f3f0fa; color: var(--ink-soft); font-style: italic; font-weight: 500;
   }
-  .rationale {
-    margin-top: 10px; padding: 10px 12px; background: var(--uw-purple-soft);
-    border-radius: 8px; font-size: 12px; color: var(--ink-soft); line-height: 1.45;
+  .stats {
+    display: flex; gap: 14px; margin: 8px 0 10px; font-size: 12.5px;
+    color: var(--ink-soft); flex-wrap: wrap;
   }
-  .rationale strong { color: var(--uw-purple-dark); }
+  .stats b { color: var(--ink); }
+  .why {
+    margin-top: 8px; padding: 10px 12px; background: #faf8ff;
+    border-left: 3px solid var(--uw-gold-bright); border-radius: 4px;
+    font-size: 13px; color: var(--ink); line-height: 1.5;
+  }
+  .why em { color: var(--uw-purple); font-style: normal; font-weight: 600; }
+
+  .profile-recap {
+    margin-top: 16px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 18px;
+  }
+  .profile-recap h4 {
+    margin: 0 0 8px; font-size: 13px; color: var(--uw-purple-dark);
+    text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700;
+  }
+  .pr-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px; font-size: 12.5px;
+  }
+  .pr-grid .pr {
+    background: #f7f5fb; border-radius: 8px; padding: 8px 10px;
+  }
+  .pr .lbl { font-size: 10.5px; text-transform: uppercase; color: var(--ink-soft); letter-spacing: 0.4px; }
+  .pr .val { margin-top: 3px; color: var(--ink); font-weight: 600; }
 
   .dim-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; font-size: 13px; }
   .dim-row label { width: 110px; color: var(--ink-soft); text-transform: capitalize; }
@@ -156,12 +212,85 @@
 
   footer { text-align: center; padding: 30px 20px; color: var(--ink-soft); font-size: 12px; }
   footer a { color: var(--uw-purple); }
+
+  /* Sign-in gate */
+  .gate-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(50, 35, 95, 0.78); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .gate-card {
+    background: white; border-radius: 16px; padding: 32px 36px;
+    max-width: 420px; text-align: center;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  }
+  .gate-card .logo-big {
+    width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--uw-gold-bright), var(--uw-gold));
+    display: flex; align-items: center; justify-content: center;
+    color: var(--uw-purple-dark); font-weight: 900; font-size: 22px;
+  }
+  .gate-card h2 { margin: 0 0 6px; color: var(--uw-purple-dark); font-size: 22px; }
+  .gate-card p { color: var(--ink-soft); font-size: 14px; margin: 0 0 22px; line-height: 1.55; }
+  .gate-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: white; color: #3c4043; border: 1.5px solid #dadce0;
+    padding: 11px 22px; border-radius: 8px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .gate-btn:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.12); border-color: #b0b6bc; }
+  .gate-btn svg { width: 18px; height: 18px; }
+  .gate-btn .uwhd { color: var(--uw-purple); font-weight: 700; }
+  .gate-foot { font-size: 11px; color: var(--ink-soft); margin-top: 18px; }
+  .gate-foot code { background: #f3f0fa; padding: 1px 5px; border-radius: 3px; color: var(--uw-purple-dark); }
+
+  /* Auth pill in header (shown after sign-in) */
+  .auth-pill {
+    display: none; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);
+    padding: 4px 12px 4px 4px; border-radius: 999px; font-size: 13px;
+    color: white; margin-left: 14px;
+  }
+  .auth-pill.show { display: inline-flex; }
+  .auth-pill .av {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--uw-gold-bright); color: var(--uw-purple-dark);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 11px;
+  }
 </style>
 </head>
 <body>
 
+<!-- UW Google sign-in gate -->
+<div class="gate-overlay" id="gate">
+  <div class="gate-card">
+    <div class="logo-big">PP</div>
+    <h2>Sign in to PackPair</h2>
+    <p>PackPair is UW-only. Sign in with your <b>@uw.edu</b> Google account to find your project team.</p>
+    <button class="gate-btn" id="gate-btn">
+      <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.17-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.32A9 9 0 009 18z"/>
+        <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 013.68 9c0-.6.1-1.18.29-1.72V4.96H.96A9 9 0 000 9c0 1.45.35 2.83.96 4.04l3.01-2.32z"/>
+        <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 009 0 9 9 0 00.96 4.96l3.01 2.32C4.68 5.16 6.66 3.58 9 3.58z"/>
+      </svg>
+      Sign in with Google <span class="uwhd">@uw.edu</span>
+    </button>
+    <div class="gate-foot">
+      Restricted to UW Google Workspace · OAuth domain hint: <code>hd=uw.edu</code>
+    </div>
+  </div>
+</div>
+
 <header class="top">
-  <div class="brand"><div class="logo">PP</div> PackPair</div>
+  <div class="brand">
+    <div class="logo">PP</div> PackPair
+    <span class="auth-pill" id="auth-pill">
+      <span class="av" id="auth-initials">U</span><span id="auth-email">you@uw.edu</span>
+    </span>
+  </div>
   <nav>
     <a href="https://github.com/habibaElswify/packpair" target="_blank">Code</a>
     <a href="about.html">About</a>
@@ -231,12 +360,21 @@
 
 <!-- STEP 2 -->
 <section class="step disabled" id="step2">
-  <h2><span class="num">2</span> Your AI-formed teams</h2>
-  <p style="margin: 0 0 10px; font-size: 14px; color: var(--ink-soft);">
-    Solved by <b>OR-Tools CP-SAT</b> on a 12-student class. Your team is highlighted in gold.
-    Badges show each member's composite reputation when ≥5 ratings are on file (k-anonymity).
-  </p>
+  <h2><span class="num">2</span> Your matches are ready</h2>
+
+  <div class="match-hero">
+    <div>
+      <div class="sub">CSS 382 · Spring 2026 · Project teams formed by PackPair</div>
+    </div>
+    <div class="ai-badge" id="ai-badge">AI-formed · CP-SAT</div>
+  </div>
+
+  <div class="meta-row" id="meta-row"></div>
+
   <div class="teams" id="teams"></div>
+
+  <div class="profile-recap" id="profile-recap"></div>
+
   <button class="btn gold" id="btn-finish" style="margin-top: 16px;" disabled>Pretend the project finished →</button>
 </section>
 
@@ -271,7 +409,32 @@
 const state = {
   skills: new Set(), topics: new Set(), avail: new Set(), comm: null,
   myName: "You", teams: null, myTeamIdx: 0, ratings: {}, posteriors: {},
+  user: null,  // {email, initials}
 };
+
+// ---------------- UW Google sign-in (simulated for the GH Pages demo) ----------------
+// Production path: Supabase Auth + Google provider, with the OAuth `hd=uw.edu`
+// domain hint and a server-side check that user.email ends in "@uw.edu".
+// Per Pisan: this is the easy auth route that works without UW IT involvement,
+// because @uw.edu Google Workspace accounts already exist for every UW student.
+function applySignIn(email) {
+  state.user = { email, initials: email.slice(0, 2).toUpperCase() };
+  document.getElementById("auth-email").textContent = email;
+  document.getElementById("auth-initials").textContent = state.user.initials;
+  document.getElementById("auth-pill").classList.add("show");
+  const gate = document.getElementById("gate");
+  gate.style.display = "none";
+}
+document.getElementById("gate-btn").addEventListener("click", () => {
+  const btn = document.getElementById("gate-btn");
+  btn.innerHTML = "<span style='color:#888;'>Signing you in…</span>";
+  btn.disabled = true;
+  setTimeout(() => applySignIn("you@uw.edu"), 650);
+});
+// Auto-dismiss for demo mode so screenshots & shareable preview don't pause on the gate.
+if (new URLSearchParams(window.location.search).get("demo") === "1") {
+  applySignIn("you@uw.edu");
+}
 
 function bindChips(containerId, key, single = false, max = null) {
   const root = document.getElementById(containerId);
@@ -373,12 +536,37 @@ function teamRationale(team) {
   const skills = new Set();
   let sharedAvail = new Set(team[0].avail);
   let sharedTopics = new Set(team[0].topics);
+  const styles = new Set();
   team.forEach(m => {
     m.skills.forEach(s => skills.add(s));
     sharedAvail = new Set([...sharedAvail].filter(x => m.avail.includes(x)));
     sharedTopics = new Set([...sharedTopics].filter(x => m.topics.includes(x)));
+    styles.add(m.comm);
   });
-  return {skills: [...skills], avail: sharedAvail.size, topics: [...sharedTopics]};
+  return {
+    skills: [...skills], avail: sharedAvail.size,
+    topics: [...sharedTopics], styles: [...styles],
+  };
+}
+// Same weighted score as the Python prototype (solver/cpsat_matcher.py base_team_score):
+//   score = 10*|skills| + 5*|shared slots| + 3*|shared topics| + 5 if styles <= 2
+function teamScore(team) {
+  const r = teamRationale(team);
+  return 10 * r.skills.length + 5 * r.avail + 3 * r.topics.length + (r.styles.length <= 2 ? 5 : 0);
+}
+function whyText(team, r, isMine) {
+  const skillsList = r.skills.slice(0, 5).join(", ") + (r.skills.length > 5 ? ", …" : "");
+  const sharedTopicTxt = r.topics.length ? `Shared interest: <strong>${r.topics.join(", ")}</strong> — a natural project anchor.` : "No single shared topic — broad complementarity.";
+  let slotTxt;
+  if (r.avail === 0) {
+    slotTxt = "<em>Schedule overlap is zero</em> — flagged for an early week-2 sync check-in (a real tradeoff the optimizer made to maximize the global score).";
+  } else if (r.avail === 1) {
+    slotTxt = "One shared time slot — workable, but async tools matter.";
+  } else {
+    slotTxt = `<strong>${r.avail}</strong> shared availability blocks — good sync coverage.`;
+  }
+  const youTxt = isMine ? "You + " : "";
+  return `<em>Why this team:</em> ${youTxt}<strong>${r.skills.length} unique skills</strong> covered (${skillsList}). ${slotTxt} ${sharedTopicTxt}`;
 }
 function reputationLabel(name) {
   if (name === state.myName) return null;
@@ -387,33 +575,72 @@ function reputationLabel(name) {
   const stars = (h.mean * 5).toFixed(1);
   return {text: `${stars}★  n=${h.n}`, cls: h.mean >= 0.65 ? "" : "low"};
 }
+const TEAM_NAMES = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon"];
+const DAY_LABELS = ["Mon AM", "Mon PM", "Tue AM", "Wed PM", "Thu AM", "Fri PM"];
+
 function renderTeams() {
+  // Meta-row chips
+  const totalScore = state.teams.reduce((s, t) => s + teamScore(t), 0);
+  const totalStudents = state.teams.reduce((s, t) => s + t.length, 0);
+  document.getElementById("meta-row").innerHTML = `
+    <div class="mc"><b>${totalStudents}</b> students placed</div>
+    <div class="mc"><b>${state.teams.length}</b> teams of 3</div>
+    <div class="mc">Global score: <b>${totalScore}</b></div>
+    <div class="mc">solver: <b>OR-Tools CP-SAT</b></div>
+  `;
+
+  // Team cards
   const container = document.getElementById("teams");
   container.innerHTML = "";
   state.teams.forEach((team, idx) => {
     const isMine = idx === state.myTeamIdx;
     const r = teamRationale(team);
+    const score = teamScore(team);
+    const teamName = isMine ? "Your team" : `Team ${TEAM_NAMES[idx] || idx + 1}`;
     const div = document.createElement("div");
     div.className = "team" + (isMine ? " mine" : "");
-    const teamLabel = isMine ? "Your team" : `Team ${idx + 1}`;
+    const styleStr = r.styles.length === 1 ? `<b>${r.styles[0]}</b>` : r.styles.map(s => s).join(" + ");
     div.innerHTML = `
-      <h3>${teamLabel}${isMine ? '<span class="badge">YOU</span>' : ''}</h3>
-      ${team.map(m => {
-        const initials = m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-        const rep = reputationLabel(m.name);
-        const repHtml = rep
-          ? `<span class="rep ${rep.cls}" title="${rep.cls === 'hidden' ? 'k-anonymity (k=5) — not enough ratings to disclose' : 'composite reputation'}">${rep.text}</span>`
-          : '';
-        return `<div class="member"><div class="avatar">${initials}</div><div class="name">${m.name}</div>${repHtml}</div>`;
-      }).join("")}
-      <div class="rationale">
-        <strong>${r.skills.length} unique skills</strong> covered: ${r.skills.join(", ")}.
-        <strong>${r.avail}</strong> shared availability block${r.avail === 1 ? "" : "s"}.
-        ${r.topics.length ? `Shared interests: <strong>${r.topics.join(", ")}</strong>.` : 'No shared topic interest.'}
+      <h3>
+        <span class="name-row">
+          ${teamName}
+          ${isMine ? '<span class="you-badge">YOU</span>' : ''}
+        </span>
+        <span class="score-pill">score ${score}</span>
+      </h3>
+      <div class="members">
+        ${team.map(m => {
+          const initials = m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+          const rep = reputationLabel(m.name);
+          const repHtml = rep
+            ? `<span class="rep-mini ${rep.cls}" title="${rep.cls === 'hidden' ? 'k-anonymity (k=5) — not enough ratings to disclose' : 'composite reputation'}">${rep.text}</span>`
+            : '';
+          return `<span class="member-chip"><span class="av">${initials}</span>${m.name}${repHtml}</span>`;
+        }).join("")}
       </div>
+      <div class="stats">
+        <span><b>${r.skills.length}</b> skills covered</span>
+        <span><b>${r.avail}</b> shared slot${r.avail === 1 ? "" : "s"}</span>
+        <span>${styleStr}</span>
+        ${r.topics.length ? `<span>shared: <b>${r.topics.join(", ")}</b></span>` : `<span>no shared interest</span>`}
+      </div>
+      <div class="why">${whyText(team, r, isMine)}</div>
     `;
     container.appendChild(div);
   });
+
+  // Profile recap (the inputs that drove this matching)
+  const me = state.teams[state.myTeamIdx][0];
+  const availLabels = me.avail.map(i => DAY_LABELS[i]).join(" · ") || "—";
+  document.getElementById("profile-recap").innerHTML = `
+    <h4>Your profile (drove the matching)</h4>
+    <div class="pr-grid">
+      <div class="pr"><div class="lbl">Skills</div><div class="val">${me.skills.join(" · ") || "—"}</div></div>
+      <div class="pr"><div class="lbl">Topic interests</div><div class="val">${me.topics.join(" · ") || "—"}</div></div>
+      <div class="pr"><div class="lbl">Availability</div><div class="val">${availLabels}</div></div>
+      <div class="pr"><div class="lbl">Comm style</div><div class="val">${me.comm}</div></div>
+    </div>
+  `;
 }
 
 document.getElementById("btn-find").addEventListener("click", () => {
