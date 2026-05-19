@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>PackPair — AI-powered team formation for UW</title>
+<title>PackPair — find your project team</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="PackPair forms balanced UW project teams using constraint-satisfaction search, Bayesian reputation, and team-success prediction." />
+<meta name="description" content="PackPair forms balanced UW project teams using AI." />
 <style>
   :root {
     --uw-purple: #4b2e83;
     --uw-purple-dark: #32235f;
+    --uw-purple-soft: #efeaf7;
     --uw-gold: #b7a57a;
     --uw-gold-bright: #ffc83d;
     --ink: #1b1b1f;
@@ -17,217 +18,556 @@
     --card: #ffffff;
     --line: #e6e1ef;
     --good: #1f7a3a;
+    --good-soft: #e6f4ea;
+    --warn: #b7202f;
+    --warn-soft: #fde7e9;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    line-height: 1.55;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
   }
-  header {
-    background: var(--uw-purple);
-    color: white;
-    padding: 14px 32px;
+  header.top {
+    background: var(--uw-purple); color: white;
+    padding: 12px 28px;
     display: flex; align-items: center; justify-content: space-between;
     border-bottom: 4px solid var(--uw-gold-bright);
   }
-  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 19px; }
   .brand .logo {
-    width: 32px; height: 32px; border-radius: 8px;
+    width: 30px; height: 30px; border-radius: 8px;
     background: linear-gradient(135deg, var(--uw-gold-bright), var(--uw-gold));
     display: flex; align-items: center; justify-content: center;
-    color: var(--uw-purple-dark); font-weight: 900; font-size: 16px;
+    color: var(--uw-purple-dark); font-weight: 900; font-size: 14px;
   }
-  nav { display: flex; gap: 22px; font-size: 14px; opacity: 0.95; }
-  nav a { color: white; text-decoration: none; }
-  nav a:hover { border-bottom: 2px solid var(--uw-gold-bright); }
-  .hero {
-    background: linear-gradient(135deg, var(--uw-purple), var(--uw-purple-dark));
-    color: white;
-    padding: 72px 32px 56px;
-    text-align: center;
+  header.top nav a { color: white; text-decoration: none; font-size: 14px; opacity: 0.9; margin-left: 18px; }
+  header.top nav a:hover { opacity: 1; border-bottom: 2px solid var(--uw-gold-bright); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 26px 24px 80px; }
+  .lede { text-align: center; padding: 18px 0 22px; }
+  .lede h1 { font-size: 36px; color: var(--uw-purple-dark); margin: 0 0 8px; letter-spacing: -0.3px; }
+  .lede p { color: var(--ink-soft); font-size: 16px; margin: 0; }
+
+  .step {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px 26px; margin-bottom: 18px; position: relative;
   }
-  .hero h1 { font-size: 56px; margin: 0 0 12px; letter-spacing: -0.5px; }
-  .hero p.tag { font-size: 22px; color: var(--uw-gold-bright); margin: 0 0 20px; font-weight: 600; }
-  .hero p.sub { font-size: 17px; max-width: 720px; margin: 0 auto 30px; opacity: 0.92; }
-  .cta { display: inline-flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .step.disabled { opacity: 0.45; pointer-events: none; }
+  .step h2 {
+    margin: 0 0 14px; font-size: 18px; color: var(--ink);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .step h2 .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--uw-purple); color: white; font-size: 14px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .step.done h2 .num { background: var(--good); }
+
+  .form-row { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 14px; }
+  .field { flex: 1 1 220px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1.5px solid var(--line); background: var(--card); color: var(--ink);
+    padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer;
+    user-select: none; transition: all 0.12s ease;
+  }
+  .chip:hover { border-color: var(--uw-purple); }
+  .chip.on { background: var(--uw-purple); color: white; border-color: var(--uw-purple); }
+  .chip.gold.on { background: var(--uw-gold-bright); color: var(--uw-purple-dark); border-color: var(--uw-gold-bright); }
+
   .btn {
-    background: var(--uw-gold-bright);
-    color: var(--uw-purple-dark);
-    padding: 12px 26px;
-    border-radius: 999px;
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 15px;
-    border: 2px solid var(--uw-gold-bright);
+    background: var(--uw-purple); color: white; border: none; padding: 10px 22px;
+    border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer;
   }
-  .btn.ghost { background: transparent; color: white; border-color: rgba(255,255,255,0.5); }
-  main { max-width: 980px; margin: 0 auto; padding: 0 32px; }
-  section { padding: 56px 0; border-bottom: 1px solid var(--line); }
-  section:last-child { border-bottom: none; }
-  h2 { font-size: 28px; margin: 0 0 16px; color: var(--uw-purple-dark); }
-  h3 { font-size: 18px; margin: 0 0 6px; color: var(--ink); }
-  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 24px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
-  .card .num { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center;
-              background: var(--uw-purple); color: white; border-radius: 50%; font-weight: 700; font-size: 14px;
-              margin-bottom: 10px; }
-  .pill { display: inline-block; background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
-          padding: 4px 12px; font-size: 13px; color: var(--ink-soft); margin: 2px 4px 2px 0; }
-  .demo-shot {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
-    margin-top: 16px;
+  .btn:hover { background: var(--uw-purple-dark); }
+  .btn.gold { background: var(--uw-gold-bright); color: var(--uw-purple-dark); }
+  .btn.gold:hover { background: var(--uw-gold); color: white; }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 12px; }
+  .team {
+    background: var(--card); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 14px 16px;
   }
-  .demo-shot img { width: 100%; display: block; border-radius: 8px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
-  th { background: var(--bg); color: var(--ink-soft); font-weight: 600; }
-  code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-  pre { background: var(--bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
-  footer { padding: 28px 32px; text-align: center; color: var(--ink-soft); font-size: 13px;
-           background: var(--card); border-top: 1px solid var(--line); }
-  .team-row { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 12px; }
-  .person { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; min-width: 220px; }
-  .person .role { color: var(--ink-soft); font-size: 13px; }
+  .team.mine { border-color: var(--uw-gold-bright); background: linear-gradient(180deg, #fffdf2 0%, white 60%); }
+  .team h3 { margin: 0 0 8px; font-size: 14px; color: var(--uw-purple-dark); display: flex; align-items: center; gap: 8px; }
+  .team h3 .badge {
+    background: var(--uw-gold-bright); color: var(--uw-purple-dark);
+    padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
+  }
+  .member {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    border-top: 1px dashed var(--line); font-size: 13px;
+  }
+  .member:first-of-type { border-top: none; }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--uw-purple-soft); color: var(--uw-purple-dark);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 11px; flex-shrink: 0;
+  }
+  .member .name { flex: 1; }
+  .member .rep {
+    font-size: 11px; padding: 2px 8px; border-radius: 6px;
+    background: var(--good-soft); color: var(--good); font-weight: 600;
+  }
+  .member .rep.low { background: var(--warn-soft); color: var(--warn); }
+  .member .rep.hidden {
+    background: #f3f0fa; color: var(--ink-soft); font-style: italic;
+  }
+  .rationale {
+    margin-top: 10px; padding: 10px 12px; background: var(--uw-purple-soft);
+    border-radius: 8px; font-size: 12px; color: var(--ink-soft); line-height: 1.45;
+  }
+  .rationale strong { color: var(--uw-purple-dark); }
+
+  .dim-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; font-size: 13px; }
+  .dim-row label { width: 110px; color: var(--ink-soft); text-transform: capitalize; }
+  .stars { display: inline-flex; gap: 2px; }
+  .star {
+    width: 22px; height: 22px; cursor: pointer; user-select: none;
+    color: #d4d0e0; font-size: 22px; line-height: 1;
+  }
+  .star.on { color: var(--uw-gold-bright); }
+
+  .post-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+    margin-top: 12px;
+  }
+  .post-card {
+    background: var(--card); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .post-card h3 { margin: 0 0 4px; font-size: 14px; color: var(--ink); }
+  .post-card .sub { font-size: 11px; color: var(--ink-soft); margin-bottom: 8px; }
+  .post-svg { width: 100%; height: 90px; display: block; }
+  .post-stats { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+  .post-stats b { color: var(--uw-purple-dark); }
+
+  .notice {
+    background: #fffaef; border-left: 3px solid var(--uw-gold-bright);
+    padding: 10px 14px; border-radius: 6px; margin-top: 14px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .notice b { color: var(--uw-purple-dark); }
+
+  footer { text-align: center; padding: 30px 20px; color: var(--ink-soft); font-size: 12px; }
+  footer a { color: var(--uw-purple); }
 </style>
 </head>
 <body>
 
-<header>
+<header class="top">
   <div class="brand"><div class="logo">PP</div> PackPair</div>
   <nav>
-    <a href="#problem">Problem</a>
-    <a href="#how">How it works</a>
-    <a href="#demo">Demo</a>
-    <a href="#team">Team</a>
-    <a href="https://github.com/habibaElswify/packpair">Repo</a>
+    <a href="https://github.com/habibaElswify/packpair" target="_blank">Code</a>
+    <a href="about.html">About</a>
   </nav>
 </header>
 
-<section class="hero">
-  <h1>PackPair</h1>
-  <p class="tag">AI-powered team formation for UW class projects</p>
-  <p class="sub">Stop hand-picking project groups. PackPair forms balanced teams from student profiles
-    using constraint-satisfaction search, Bayesian peer-reputation, and team-success prediction —
-    and gets smarter every quarter.</p>
-  <div class="cta">
-    <a class="btn" href="#demo">See the demo</a>
-    <a class="btn ghost" href="https://github.com/habibaElswify/packpair">GitHub</a>
-  </div>
-</section>
-
 <main>
 
-<section id="problem">
-  <h2>The problem we're solving</h2>
-  <p>In every UW class with a group project, students either pick their friends — which clusters strong
-    students together and leaves others behind — or instructors randomize, which mismatches skills and
-    schedules. Neither approach uses what the system already knows about who works well together.
-    PackPair fixes this with three layers of AI behind a single sign-in.</p>
-</section>
+<div class="lede">
+  <h1>Find your project team.</h1>
+  <p>Tell PackPair about you — get an AI-formed team for your next UW class project.</p>
+</div>
 
-<section id="how">
-  <h2>How it works</h2>
-  <p>Three meaningfully distinct AI techniques, layered — not a side-chat wrapper.</p>
-  <div class="grid3">
-    <div class="card">
-      <div class="num">1</div>
-      <h3>Constraint-satisfaction search</h3>
-      <p>Team assignment is an integer program: students × candidate-teams, with one-team-per-student
-        and capacity constraints. Solved with <strong>Google OR-Tools CP-SAT</strong>. The objective
-        weights skill diversity, schedule overlap, topic alignment, and communication-style fit.</p>
+<!-- STEP 1 -->
+<section class="step" id="step1">
+  <h2><span class="num">1</span> Build your profile</h2>
+  <div class="form-row">
+    <div class="field">
+      <label>Skills (pick 2–3)</label>
+      <div class="chips" id="chips-skills">
+        <span class="chip" data-v="frontend">frontend</span>
+        <span class="chip" data-v="backend">backend</span>
+        <span class="chip" data-v="databases">databases</span>
+        <span class="chip" data-v="ml">ml</span>
+        <span class="chip" data-v="design">design</span>
+        <span class="chip" data-v="python">python</span>
+        <span class="chip" data-v="devops">devops</span>
+        <span class="chip" data-v="writing">writing</span>
+      </div>
     </div>
-    <div class="card">
-      <div class="num">2</div>
-      <h3>Bayesian reputation</h3>
-      <p>Each student carries a <code>Beta(α, β)</code> posterior per rating dimension —
-        participation, communication, technical contribution. New students start at the neutral prior
-        <code>Beta(1, 1)</code> (cold-start mitigation). Ratings update via conjugacy; the team
-        objective is bumped by the team's mean composite.</p>
-    </div>
-    <div class="card">
-      <div class="num">3</div>
-      <h3>Supervised team-success prediction</h3>
-      <p>After each project, peer-rating outcomes feed a supervised model that re-weights the search
-        objective for the next quarter — so the matcher learns which feature combinations actually
-        produced successful teams at UW, not which ones looked good on paper.</p>
-    </div>
-  </div>
-</section>
-
-<section id="safeguards">
-  <h2>Safeguards</h2>
-  <p>Proposal AI feedback flagged two risks. Both are mitigated in code.</p>
-  <table>
-    <thead><tr><th>Risk</th><th>Mitigation</th><th>Where</th></tr></thead>
-    <tbody>
-      <tr>
-        <td>Cold-start — no rating data on day one</td>
-        <td>Neutral Beta(1, 1) prior per dimension; every student starts at a known baseline that updates as ratings arrive</td>
-        <td><code>solver/reputation.py</code></td>
-      </tr>
-      <tr>
-        <td>Anti-gaming — 3-person team ratings are re-identifiable</td>
-        <td>k-anonymity guard (k = 5) on rolling rating aggregates; suppressed when the window is too small to anonymize</td>
-        <td><code>solver/privacy.py</code></td>
-      </tr>
-    </tbody>
-  </table>
-</section>
-
-<section id="demo">
-  <h2>Demo</h2>
-  <p>A student's view of their matches page after submitting a profile — four AI-formed teams,
-    each with the rationale the matcher used.</p>
-  <div class="demo-shot">
-    <img src="mockup.png" alt="Matches page screenshot — four teams with rationale" />
-  </div>
-  <p style="margin-top:18px;">Reproduce the underlying solver locally:</p>
-<pre>git clone https://github.com/habibaElswify/packpair
-cd packpair
-python3 -m venv .venv && .venv/bin/pip install ortools scipy
-.venv/bin/python -m solver.demo_pipeline   # all three AI layers, end-to-end
-.venv/bin/python -m solver.cli --n 30       # scaling test (30 students)</pre>
-</section>
-
-<section id="stack">
-  <h2>Tech stack</h2>
-  <span class="pill">Next.js 14</span>
-  <span class="pill">React 19</span>
-  <span class="pill">TypeScript</span>
-  <span class="pill">Supabase (Postgres)</span>
-  <span class="pill">FastAPI</span>
-  <span class="pill">Python 3.14</span>
-  <span class="pill">OR-Tools CP-SAT</span>
-  <span class="pill">SciPy (Beta posteriors)</span>
-  <span class="pill">Vercel / GitHub Pages</span>
-</section>
-
-<section id="team">
-  <h2>Team</h2>
-  <div class="team-row">
-    <div class="person">
-      <h3>Habiba Elswify</h3>
-      <div class="role">CSP solver · backend · architecture</div>
-    </div>
-    <div class="person">
-      <h3>Aasiya Sathar</h3>
-      <div class="role">Schema · frontend · privacy &amp; anti-gaming</div>
+    <div class="field">
+      <label>Topic interests (pick 1–2)</label>
+      <div class="chips" id="chips-topics">
+        <span class="chip" data-v="ai">ai</span>
+        <span class="chip" data-v="web">web</span>
+        <span class="chip" data-v="infra">infra</span>
+        <span class="chip" data-v="nlp">nlp</span>
+        <span class="chip" data-v="ux">ux</span>
+        <span class="chip" data-v="research">research</span>
+      </div>
     </div>
   </div>
-  <p style="margin-top:18px; color: var(--ink-soft); font-size: 14px;">
-    CSS 382 — Introduction to Artificial Intelligence · University of Washington · DYOP Final Project · Spring 2026
+  <div class="form-row">
+    <div class="field">
+      <label>Availability (pick 2–4)</label>
+      <div class="chips" id="chips-avail">
+        <span class="chip" data-v="0">Mon AM</span>
+        <span class="chip" data-v="1">Mon PM</span>
+        <span class="chip" data-v="2">Tue AM</span>
+        <span class="chip" data-v="3">Wed PM</span>
+        <span class="chip" data-v="4">Thu AM</span>
+        <span class="chip" data-v="5">Fri PM</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Communication style</label>
+      <div class="chips" id="chips-comm">
+        <span class="chip gold" data-v="sync">sync (calls)</span>
+        <span class="chip gold" data-v="async">async (chat)</span>
+        <span class="chip gold" data-v="mixed">mixed</span>
+      </div>
+    </div>
+  </div>
+  <button class="btn" id="btn-find" disabled>Find my team →</button>
+  <span id="hint" style="margin-left: 12px; color: var(--ink-soft); font-size: 13px;">pick ≥2 skills, ≥1 topic, ≥2 availability, a comm style</span>
+</section>
+
+<!-- STEP 2 -->
+<section class="step disabled" id="step2">
+  <h2><span class="num">2</span> Your AI-formed teams</h2>
+  <p style="margin: 0 0 10px; font-size: 14px; color: var(--ink-soft);">
+    Solved by <b>OR-Tools CP-SAT</b> on a 12-student class. Your team is highlighted in gold.
+    Badges show each member's composite reputation when ≥5 ratings are on file (k-anonymity).
   </p>
+  <div class="teams" id="teams"></div>
+  <button class="btn gold" id="btn-finish" style="margin-top: 16px;" disabled>Pretend the project finished →</button>
+</section>
+
+<!-- STEP 3 -->
+<section class="step disabled" id="step3">
+  <h2><span class="num">3</span> Rate your teammates</h2>
+  <p style="margin: 0 0 12px; font-size: 14px; color: var(--ink-soft);">
+    Anonymous ratings on a 1–5 scale across three dimensions. These feed the Bayesian reputation model.
+  </p>
+  <div id="rate-area"></div>
+  <button class="btn" id="btn-submit-ratings" style="margin-top: 12px;" disabled>Submit ratings →</button>
+</section>
+
+<!-- STEP 4 -->
+<section class="step disabled" id="step4">
+  <h2><span class="num">4</span> Reputation — what your ratings did</h2>
+  <p style="margin: 0 0 8px; font-size: 14px; color: var(--ink-soft);">
+    Each teammate carries a <b>Beta(α, β)</b> posterior per dimension. New students start at the neutral prior <code>Beta(1, 1)</code> (cold-start mitigation). Dashed curve = posterior before your rating; solid purple = after.
+  </p>
+  <div class="post-grid" id="post-grid"></div>
+  <div class="notice" id="kanon-notice"></div>
 </section>
 
 </main>
 
 <footer>
-  PackPair · CSS 382 DYOP Final Project · UW · 2026 ·
+  PackPair · CSS 382 Introduction to AI · UW · DYOP Final · 2026 ·
   <a href="https://github.com/habibaElswify/packpair">github.com/habibaElswify/packpair</a>
 </footer>
+
+<script>
+const state = {
+  skills: new Set(), topics: new Set(), avail: new Set(), comm: null,
+  myName: "You", teams: null, myTeamIdx: 0, ratings: {}, posteriors: {},
+};
+
+function bindChips(containerId, key, single = false, max = null) {
+  const root = document.getElementById(containerId);
+  root.addEventListener("click", (ev) => {
+    const t = ev.target.closest(".chip");
+    if (!t) return;
+    const v = t.dataset.v;
+    if (single) {
+      root.querySelectorAll(".chip").forEach(c => c.classList.remove("on"));
+      t.classList.add("on"); state[key] = v;
+    } else {
+      if (t.classList.contains("on")) {
+        t.classList.remove("on"); state[key].delete(v);
+      } else {
+        if (max && state[key].size >= max) {
+          const first = [...state[key]][0];
+          state[key].delete(first);
+          root.querySelector(`.chip[data-v="${first}"]`).classList.remove("on");
+        }
+        t.classList.add("on"); state[key].add(v);
+      }
+    }
+    refreshFindBtn();
+  });
+}
+bindChips("chips-skills", "skills", false, 3);
+bindChips("chips-topics", "topics", false, 2);
+bindChips("chips-avail", "avail", false, 4);
+bindChips("chips-comm", "comm", true);
+
+function refreshFindBtn() {
+  const ok = state.skills.size >= 2 && state.topics.size >= 1
+          && state.avail.size >= 2 && state.comm !== null;
+  document.getElementById("btn-find").disabled = !ok;
+  document.getElementById("hint").style.display = ok ? "none" : "inline";
+}
+
+const POOL = [
+  {name: "Alex Chen",    skills: ["frontend", "design"],   avail: [0, 1, 2], comm: "sync",  topics: ["ai", "web"]},
+  {name: "Maya Patel",   skills: ["backend", "databases"], avail: [1, 2, 3], comm: "async", topics: ["ai", "infra"]},
+  {name: "Jordan Kim",   skills: ["ml", "python"],         avail: [0, 2, 3], comm: "async", topics: ["ai", "nlp"]},
+  {name: "Sara Ahmed",   skills: ["frontend", "ml"],       avail: [2, 3, 4], comm: "sync",  topics: ["web", "nlp"]},
+  {name: "Diego Lopez",  skills: ["backend", "devops"],    avail: [3, 4, 5], comm: "mixed", topics: ["infra", "research"]},
+  {name: "Priya Shah",   skills: ["ml", "python"],         avail: [4, 5, 0], comm: "async", topics: ["ai", "research"]},
+  {name: "Ethan Wright", skills: ["design", "writing"],    avail: [0, 1, 5], comm: "sync",  topics: ["web", "ux"]},
+  {name: "Yuki Tanaka",  skills: ["python", "databases"],  avail: [2, 3, 4], comm: "async", topics: ["infra", "nlp"]},
+  {name: "Noor Hassan",  skills: ["frontend", "writing"],  avail: [1, 2, 3], comm: "mixed", topics: ["ux", "web"]},
+  {name: "Liam OBrien",  skills: ["ml", "backend"],        avail: [3, 4, 5], comm: "async", topics: ["research", "ai"]},
+  {name: "Aria Rossi",   skills: ["design", "python"],     avail: [0, 4, 5], comm: "sync",  topics: ["ux", "ai"]},
+];
+const REP_HISTORY = {
+  "Alex Chen":    {n: 12, mean: 0.78},
+  "Maya Patel":   {n: 8,  mean: 0.66},
+  "Jordan Kim":   {n: 14, mean: 0.81},
+  "Sara Ahmed":   {n: 3,  mean: 0.55},
+  "Diego Lopez":  {n: 6,  mean: 0.62},
+  "Priya Shah":   {n: 9,  mean: 0.73},
+  "Ethan Wright": {n: 4,  mean: 0.51},
+  "Yuki Tanaka":  {n: 11, mean: 0.69},
+  "Noor Hassan":  {n: 7,  mean: 0.58},
+  "Liam OBrien":  {n: 13, mean: 0.74},
+  "Aria Rossi":   {n: 10, mean: 0.71},
+};
+const K_THRESHOLD = 5;
+
+function jaccard(a, b) {
+  const sa = new Set(a), sb = new Set(b);
+  const inter = [...sa].filter(x => sb.has(x)).length;
+  const uni = new Set([...sa, ...sb]).size;
+  return uni === 0 ? 0 : inter / uni;
+}
+function scoreFit(me, other) {
+  const skillsUnion = (new Set([...me.skills, ...other.skills])).size * 4;
+  const skillsOverlap = jaccard(me.skills, other.skills) * -8;
+  const availOverlap = jaccard(me.avail, other.avail) * 10;
+  const topicOverlap = jaccard(me.topics, other.topics) * 8;
+  const commFit = (me.comm === other.comm || me.comm === "mixed" || other.comm === "mixed") ? 4 : 0;
+  const repBoost = REP_HISTORY[other.name].mean * 6;
+  return skillsUnion + skillsOverlap + availOverlap + topicOverlap + commFit + repBoost;
+}
+function formTeams() {
+  const me = {
+    name: state.myName,
+    skills: [...state.skills], avail: [...state.avail].map(Number),
+    comm: state.comm, topics: [...state.topics],
+  };
+  const ranked = [...POOL].sort((a, b) => scoreFit(me, b) - scoreFit(me, a));
+  const myTeammates = ranked.slice(0, 2);
+  const remaining = POOL.filter(p => !myTeammates.includes(p));
+  const others = [];
+  while (remaining.length >= 3) {
+    const anchor = remaining.shift();
+    remaining.sort((a, b) => scoreFit(anchor, b) - scoreFit(anchor, a));
+    others.push([anchor, ...remaining.splice(0, 2)]);
+  }
+  return [[me, ...myTeammates], ...others];
+}
+function teamRationale(team) {
+  const skills = new Set();
+  let sharedAvail = new Set(team[0].avail);
+  let sharedTopics = new Set(team[0].topics);
+  team.forEach(m => {
+    m.skills.forEach(s => skills.add(s));
+    sharedAvail = new Set([...sharedAvail].filter(x => m.avail.includes(x)));
+    sharedTopics = new Set([...sharedTopics].filter(x => m.topics.includes(x)));
+  });
+  return {skills: [...skills], avail: sharedAvail.size, topics: [...sharedTopics]};
+}
+function reputationLabel(name) {
+  if (name === state.myName) return null;
+  const h = REP_HISTORY[name];
+  if (!h || h.n < K_THRESHOLD) return {text: `new (n=${h ? h.n : 0})`, cls: "hidden"};
+  const stars = (h.mean * 5).toFixed(1);
+  return {text: `${stars}★  n=${h.n}`, cls: h.mean >= 0.65 ? "" : "low"};
+}
+function renderTeams() {
+  const container = document.getElementById("teams");
+  container.innerHTML = "";
+  state.teams.forEach((team, idx) => {
+    const isMine = idx === state.myTeamIdx;
+    const r = teamRationale(team);
+    const div = document.createElement("div");
+    div.className = "team" + (isMine ? " mine" : "");
+    const teamLabel = isMine ? "Your team" : `Team ${idx + 1}`;
+    div.innerHTML = `
+      <h3>${teamLabel}${isMine ? '<span class="badge">YOU</span>' : ''}</h3>
+      ${team.map(m => {
+        const initials = m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+        const rep = reputationLabel(m.name);
+        const repHtml = rep
+          ? `<span class="rep ${rep.cls}" title="${rep.cls === 'hidden' ? 'k-anonymity (k=5) — not enough ratings to disclose' : 'composite reputation'}">${rep.text}</span>`
+          : '';
+        return `<div class="member"><div class="avatar">${initials}</div><div class="name">${m.name}</div>${repHtml}</div>`;
+      }).join("")}
+      <div class="rationale">
+        <strong>${r.skills.length} unique skills</strong> covered: ${r.skills.join(", ")}.
+        <strong>${r.avail}</strong> shared availability block${r.avail === 1 ? "" : "s"}.
+        ${r.topics.length ? `Shared interests: <strong>${r.topics.join(", ")}</strong>.` : 'No shared topic interest.'}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+document.getElementById("btn-find").addEventListener("click", () => {
+  state.teams = formTeams();
+  state.myTeamIdx = 0;
+  renderTeams();
+  document.getElementById("step1").classList.add("done");
+  document.getElementById("step2").classList.remove("disabled");
+  document.getElementById("btn-finish").disabled = false;
+  document.getElementById("step2").scrollIntoView({behavior: "smooth", block: "start"});
+});
+
+document.getElementById("btn-finish").addEventListener("click", () => {
+  const teammates = state.teams[state.myTeamIdx].slice(1);
+  const dims = ["participation", "communication", "technical"];
+  const root = document.getElementById("rate-area");
+  root.innerHTML = "";
+  teammates.forEach(tm => {
+    state.ratings[tm.name] = {};
+    const card = document.createElement("div");
+    card.className = "team";
+    card.style.marginBottom = "12px";
+    card.innerHTML = `
+      <h3>${tm.name}</h3>
+      ${dims.map(d => `
+        <div class="dim-row">
+          <label>${d}</label>
+          <div class="stars" data-student="${tm.name}" data-dim="${d}">
+            ${[1,2,3,4,5].map(n => `<span class="star" data-n="${n}">★</span>`).join("")}
+          </div>
+        </div>`).join("")}
+    `;
+    root.appendChild(card);
+  });
+  document.getElementById("step2").classList.add("done");
+  document.getElementById("step3").classList.remove("disabled");
+  document.getElementById("step3").scrollIntoView({behavior: "smooth", block: "start"});
+});
+
+document.addEventListener("click", (ev) => {
+  const star = ev.target.closest(".star");
+  if (!star) return;
+  const stars = star.parentElement;
+  const student = stars.dataset.student;
+  const dim = stars.dataset.dim;
+  const n = parseInt(star.dataset.n);
+  stars.querySelectorAll(".star").forEach((s, i) => s.classList.toggle("on", i < n));
+  state.ratings[student][dim] = n;
+  const dims = ["participation", "communication", "technical"];
+  const ready = Object.values(state.ratings).every(r => dims.every(d => typeof r[d] === "number"));
+  document.getElementById("btn-submit-ratings").disabled = !ready;
+});
+
+function logGamma(z) {
+  const g = 7;
+  const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+             771.32342877765313, -176.61502916214059, 12.507343278686905,
+             -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+  z -= 1;
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+function betaPdf(x, a, b) {
+  if (x <= 0 || x >= 1) return 0;
+  return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x)
+                  - (logGamma(a) + logGamma(b) - logGamma(a + b)));
+}
+function svgCurve(alpha, beta, alphaPrior, betaPrior) {
+  const N = 80, W = 240, H = 90, padL = 8, padR = 8, padT = 6, padB = 16;
+  const xs = [], ysNew = [], ysOld = [];
+  for (let i = 0; i <= N; i++) {
+    const x = (i / N) * 0.998 + 0.001;
+    xs.push(x);
+    ysNew.push(betaPdf(x, alpha, beta));
+    ysOld.push(betaPdf(x, alphaPrior, betaPrior));
+  }
+  const maxY = Math.max(...ysNew, ...ysOld, 0.1);
+  const sx = x => padL + ((W - padL - padR) * x);
+  const sy = y => (H - padB) - ((H - padT - padB) * (y / maxY));
+  const pathNew = xs.map((x, i) => `${i === 0 ? "M" : "L"}${sx(x).toFixed(1)},${sy(ysNew[i]).toFixed(1)}`).join("");
+  const pathOld = xs.map((x, i) => `${i === 0 ? "M" : "L"}${sx(x).toFixed(1)},${sy(ysOld[i]).toFixed(1)}`).join("");
+  return `<svg class="post-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <line x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}" stroke="#ddd" stroke-width="1"/>
+    <path d="${pathOld}" fill="none" stroke="#b0a4d4" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <path d="${pathNew}" fill="none" stroke="#4b2e83" stroke-width="2.4"/>
+    <text x="${padL}" y="${H - 2}" font-size="9" fill="#888">0</text>
+    <text x="${W/2}" y="${H - 2}" font-size="9" fill="#888" text-anchor="middle">quality →</text>
+    <text x="${W - padR}" y="${H - 2}" font-size="9" fill="#888" text-anchor="end">1</text>
+  </svg>`;
+}
+
+document.getElementById("btn-submit-ratings").addEventListener("click", () => {
+  const dims = ["participation", "communication", "technical"];
+  const teammates = state.teams[state.myTeamIdx].slice(1);
+  const grid = document.getElementById("post-grid");
+  grid.innerHTML = "";
+  let kanonCount = 0;
+  teammates.forEach(tm => {
+    state.posteriors[tm.name] = {};
+    const h = REP_HISTORY[tm.name];
+    const totalAfter = h.n + 1;
+    const disclosed = totalAfter >= K_THRESHOLD;
+    if (!disclosed) kanonCount++;
+
+    const dimHtml = dims.map(dim => {
+      const alphaOld = 1 + h.mean * h.n;
+      const betaOld = 1 + (1 - h.mean) * h.n;
+      const s = (state.ratings[tm.name][dim] - 1) / 4;
+      const alphaNew = alphaOld + s;
+      const betaNew = betaOld + (1 - s);
+      state.posteriors[tm.name][dim] = {alpha: alphaNew, beta: betaNew};
+      const meanNew = alphaNew / (alphaNew + betaNew);
+      const meanOld = alphaOld / (alphaOld + betaOld);
+      const delta = meanNew - meanOld;
+      const deltaStr = (delta >= 0 ? "+" : "") + delta.toFixed(3);
+      return `
+        <div style="margin-top: 10px;">
+          <div style="font-size: 12px; color: var(--ink-soft);">
+            <b style="color: var(--uw-purple-dark); text-transform: capitalize;">${dim}</b>
+            &nbsp;·&nbsp; you gave: ${state.ratings[tm.name][dim]}★
+          </div>
+          ${svgCurve(alphaNew, betaNew, alphaOld, betaOld)}
+          <div class="post-stats">
+            mean: <b>${meanNew.toFixed(3)}</b> &nbsp;(Δ ${deltaStr})&nbsp;·&nbsp; α=${alphaNew.toFixed(2)}, β=${betaNew.toFixed(2)}
+          </div>
+        </div>`;
+    }).join("");
+
+    const card = document.createElement("div");
+    card.className = "post-card";
+    card.innerHTML = `
+      <h3>${tm.name}</h3>
+      <div class="sub">${disclosed
+        ? `Public aggregate visible (n = ${totalAfter} ≥ k = 5)`
+        : `<span style="color: var(--warn);">Aggregate suppressed — k-anonymity (n = ${totalAfter} &lt; k = 5)</span>`}
+      </div>
+      ${dimHtml}
+    `;
+    grid.appendChild(card);
+  });
+
+  const notice = document.getElementById("kanon-notice");
+  notice.innerHTML = kanonCount > 0
+    ? `<b>k-anonymity guard active.</b> ${kanonCount} teammate(s) have fewer than ${K_THRESHOLD} total ratings, so their public composite is suppressed — your rating is recorded but not yet displayed publicly. This is the anti-gaming mitigation from our proposal feedback.`
+    : `<b>All teammates' aggregates are publicly disclosed</b> (each has ≥ ${K_THRESHOLD} ratings total). The k-anonymity guard only suppresses when the rating window would let a single rater be re-identified.`;
+
+  document.getElementById("step3").classList.add("done");
+  document.getElementById("step4").classList.remove("disabled");
+  document.getElementById("step4").scrollIntoView({behavior: "smooth", block: "start"});
+});
+</script>
 
 </body>
 </html>
