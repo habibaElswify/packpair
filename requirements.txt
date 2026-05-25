@@ -1,2 +1,6 @@
+# Runtime dependencies for the FastAPI solver service (deployed on Render)
 ortools>=9.10
 scipy>=1.13
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
