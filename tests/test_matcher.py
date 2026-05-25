@@ -6,7 +6,7 @@ for any roster size, under each remainder policy.
 
 from __future__ import annotations
 
-from solver.matcher import form_teams
+from solver.matcher import form_teams, move_student, score_teams
 from solver.students import Student, fs, fi
 
 
@@ -59,3 +59,25 @@ def test_strict_manual_holds_leftovers_for_teacher():
         s.name for s in result.unplaced
     }
     assert names == {s.name for s in pool}
+
+
+def test_move_student_relocates_and_keeps_everyone():
+    pool = make_pool(6)
+    teams = [tuple(pool[:3]), tuple(pool[3:])]  # two teams of 3
+
+    moved = move_student(teams, "S000", dest_index=1)
+
+    assert "S000" not in {s.name for s in moved[0]}
+    assert "S000" in {s.name for s in moved[1]}
+    assert len(moved[0]) == 2 and len(moved[1]) == 4
+    assert {s.name for t in moved for s in t} == {s.name for s in pool}  # nobody lost
+
+
+def test_score_teams_returns_one_score_per_team():
+    pool = make_pool(6)
+    teams = [tuple(pool[:3]), tuple(pool[3:])]
+
+    scores = score_teams(teams)
+
+    assert len(scores) == 2
+    assert all(isinstance(s, int) for s in scores)

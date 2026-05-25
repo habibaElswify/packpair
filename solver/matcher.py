@@ -71,6 +71,33 @@ def form_teams(
     raise NotImplementedError(f"remainder_policy {remainder_policy!r} not implemented")
 
 
+def score_teams(teams: List[Team]) -> List[int]:
+    """Base score per team — what the teacher's edit view shows live."""
+    return [base_team_score(team) for team in teams]
+
+
+def move_student(
+    teams: List[Team], student_name: str, dest_index: int
+) -> List[Team]:
+    """Return new teams with ``student_name`` moved into team ``dest_index``.
+
+    Used by the teacher edit/override mode. Nobody is dropped; the student is
+    removed from whichever team currently holds them and added to the target.
+    """
+    moving: Optional[Student] = None
+    stripped: List[List[Student]] = []
+    for team in teams:
+        kept = [s for s in team if s.name != student_name]
+        for s in team:
+            if s.name == student_name:
+                moving = s
+        stripped.append(kept)
+    if moving is None:
+        raise ValueError(f"student {student_name!r} not found in any team")
+    stripped[dest_index].append(moving)
+    return [tuple(team) for team in stripped]
+
+
 def _partition(
     pool: List[Student],
     sizes,
@@ -121,7 +148,10 @@ def _partition(
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_s
-    solver.parameters.num_search_workers = 4
+    solver.parameters.num_search_workers = 8
+    # Stop once provably within 2% of optimal — turns a 10s "prove it" wait into
+    # a sub-second near-optimal answer on big classes. time_limit_s is the cap.
+    solver.parameters.relative_gap_limit = 0.02
 
     t0 = time.perf_counter()
     status = solver.Solve(model)

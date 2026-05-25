@@ -39,6 +39,16 @@ MOCK_POOL: List[Student] = [
 ]
 
 
+def neutral_student(name: str) -> Student:
+    """A straggler who never filled a profile.
+
+    Used by the ``neutral_default`` straggler policy: no skills or topics to
+    contribute, maximally available (so they fit anywhere), neutral comm style.
+    They carry no signal but are always placeable.
+    """
+    return Student(name, fs(), fi(*range(14)), "mixed", fs())
+
+
 def synthetic_pool(n: int, seed: int = 7) -> List[Student]:
     """Deterministic synthetic roster of n students for scaling tests."""
     import random
