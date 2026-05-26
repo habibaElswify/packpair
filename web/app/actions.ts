@@ -191,6 +191,113 @@ export async function saveProfile(eventId: string, formData: FormData) {
   redirect(`/events/${eventId}`);
 }
 
+const DIMENSIONS = ["participation", "communication", "technical"] as const;
+
+export async function setEventState(eventId: string, state: string) {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+  await admin.from("events").update({ state }).eq("id", eventId);
+  revalidatePath(`/events/${eventId}`);
+}
+
+export async function saveRatings(eventId: string, formData: FormData) {
+  const user = await requireUser();
+  const admin = createAdminClient();
+
+  const { data: me } = await admin
+    .from("event_members")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!me) throw new Error("You're not in this event");
+
+  const rows: {
+    event_id: string;
+    rater_member_id: string;
+    subject_member_id: string;
+    dimension: string;
+    stars: number;
+  }[] = [];
+  for (const [key, value] of formData.entries()) {
+    // keys look like rating-<subjectMemberId>-<dimension>
+    const m = /^rating-(.+)-(participation|communication|technical)$/.exec(key);
+    if (!m) continue;
+    const stars = Number(value);
+    if (!stars) continue;
+    rows.push({
+      event_id: eventId,
+      rater_member_id: me.id,
+      subject_member_id: m[1],
+      dimension: m[2],
+      stars,
+    });
+  }
+  if (rows.length) {
+    await admin
+      .from("ratings")
+      .upsert(rows, {
+        onConflict: "event_id,rater_member_id,subject_member_id,dimension",
+      });
+  }
+  redirect(`/events/${eventId}/reputation`);
+}
+
+// Demo helper: generate plausible peer ratings among seeded students so the
+// Bayesian reputation + k-anonymity layers can be shown without 30 real raters.
+export async function simulateRatings(eventId: string) {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+
+  const { data: teamMembers } = await admin
+    .from("team_members")
+    .select("team_id, member_id");
+  const byTeam = new Map<string, string[]>();
+  for (const tm of teamMembers ?? []) {
+    const list = byTeam.get(tm.team_id) ?? [];
+    list.push(tm.member_id);
+    byTeam.set(tm.team_id, list);
+  }
+
+  // Give each member a hidden "true quality"; ratings cluster around it.
+  const quality = new Map<string, number>();
+  const rows: {
+    event_id: string;
+    rater_member_id: string;
+    subject_member_id: string;
+    dimension: string;
+    stars: number;
+  }[] = [];
+  for (const ids of byTeam.values()) {
+    for (const id of ids)
+      if (!quality.has(id)) quality.set(id, 0.4 + Math.random() * 0.55);
+    for (const rater of ids) {
+      for (const subject of ids) {
+        if (rater === subject) continue;
+        for (const dim of DIMENSIONS) {
+          const q = quality.get(subject)!;
+          const noisy = Math.max(0, Math.min(1, q + (Math.random() - 0.5) * 0.3));
+          rows.push({
+            event_id: eventId,
+            rater_member_id: rater,
+            subject_member_id: subject,
+            dimension: dim,
+            stars: Math.round(1 + 4 * noisy),
+          });
+        }
+      }
+    }
+  }
+  if (rows.length) {
+    await admin.from("ratings").upsert(rows, {
+      onConflict: "event_id,rater_member_id,subject_member_id,dimension",
+    });
+  }
+  revalidatePath(`/events/${eventId}/reputation`);
+}
+
 export async function formTeams(eventId: string) {
   const user = await requireUser();
   const event = await requireOwner(eventId, user.id);

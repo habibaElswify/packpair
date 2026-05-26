@@ -78,23 +78,43 @@ export default async function EventPage({
         </div>
 
         {isOwner && (
-          <TeacherControls eventId={id} studentCount={students.length} />
+          <TeacherControls
+            eventId={id}
+            studentCount={students.length}
+            state={event.state}
+            hasTeams={(teams?.length ?? 0) > 0}
+          />
         )}
 
         {!isOwner && myMember && (
-          <div className="flex items-center justify-between rounded-xl border border-[#e6e1ef] bg-white p-5">
-            <div>
-              <div className="font-semibold text-[#32235f]">You&apos;ve joined this event</div>
-              <div className="text-sm text-[#4a4a55]">
-                Keep your profile up to date so the AI places you well.
-              </div>
+          <div className="rounded-xl border border-[#e6e1ef] bg-white p-5">
+            <div className="mb-3 font-semibold text-[#32235f]">
+              You&apos;ve joined this event
             </div>
-            <Link
-              href={`/events/${id}/profile`}
-              className="rounded-lg bg-[#4b2e83] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#32235f]"
-            >
-              Edit your profile
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href={`/events/${id}/profile`}
+                className="rounded-lg bg-[#4b2e83] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#32235f]"
+              >
+                Edit your profile
+              </Link>
+              {event.state === "peer_review" && (
+                <Link
+                  href={`/events/${id}/rate`}
+                  className="rounded-lg border border-[#d8cfe9] px-4 py-2 text-sm font-medium text-[#4b2e83] transition hover:bg-[#efeaf7]"
+                >
+                  Rate teammates
+                </Link>
+              )}
+              {(teams?.length ?? 0) > 0 && (
+                <Link
+                  href={`/events/${id}/reputation`}
+                  className="rounded-lg border border-[#d8cfe9] px-4 py-2 text-sm font-medium text-[#4b2e83] transition hover:bg-[#efeaf7]"
+                >
+                  View reputation
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
