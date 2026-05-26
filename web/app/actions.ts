@@ -501,8 +501,34 @@ async function getDemoEvent() {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!data?.is_demo) throw new Error("No demo sandbox available");
-  return { admin, ev: data };
+  if (data?.is_demo) return { admin, ev: data };
+
+  // Lazily (re)create the public sandbox so /demo keeps working without a
+  // persistent demo event sitting around on dashboards.
+  const { data: owner } = await admin
+    .from("profiles")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!owner) throw new Error("No profile available to own the demo sandbox");
+  const code = "DEMO" + Math.random().toString(36).slice(2, 6).toUpperCase();
+  const { data: created, error } = await admin
+    .from("events")
+    .insert({
+      owner_id: owner.id,
+      course_label: "PackPair — Public Demo",
+      target_team_size: 3,
+      remainder_policy: "strict_best_fit",
+      straggler_policy: "neutral_default",
+      state: "matched",
+      is_demo: true,
+      join_code: code,
+    })
+    .select("id, is_demo, target_team_size, remainder_policy, min_size, max_size")
+    .single();
+  if (error || !created) throw new Error("Could not create demo sandbox");
+  return { admin, ev: created };
 }
 
 // Generate a fresh random class and run the real CP-SAT solver on it.
