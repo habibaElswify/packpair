@@ -20,18 +20,16 @@ export const dynamic = "force-dynamic";
 export default async function DemoPage() {
   const admin = createAdminClient();
 
-  // Most recent event that actually has teams.
-  const { data: latestTeam } = await admin
-    .from("teams")
-    .select("event_id, created_at")
+  // The dedicated public sandbox event (is_demo) — kept separate from any real
+  // class event, so the interactive demo never touches real data.
+  const { data: event } = await admin
+    .from("events")
+    .select("id, course_label")
+    .eq("is_demo", true)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-
-  const eventId = latestTeam?.event_id;
-  const event = eventId
-    ? (await admin.from("events").select("course_label").eq("id", eventId).maybeSingle()).data
-    : null;
+  const eventId = event?.id;
 
   const { data: members } = eventId
     ? await admin.from("event_members").select("id, roster_name").eq("event_id", eventId)
