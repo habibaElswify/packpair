@@ -21,6 +21,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from itertools import combinations
+from math import comb
 from typing import Callable, List, Optional, Tuple
 
 from ortools.sat.python import cp_model
@@ -49,26 +50,85 @@ def form_teams(
     reputation_bonus: Optional[Callable[[Team], int]] = None,
     time_limit_s: float = 10.0,
 ) -> MatchResult:
+    n = len(pool)
     if remainder_policy == "flexible_range":
         lo = min_size if min_size is not None else target_size - 1
         hi = max_size if max_size is not None else target_size + 1
-        return _partition(pool, range(lo, hi + 1), reputation_bonus, time_limit_s)
-    if remainder_policy == "strict_best_fit":
-        n = len(pool)
-        n_teams = max(1, n // target_size)
-        biggest = n - (n_teams - 1) * target_size  # the team that absorbs leftovers
-        sizes = range(min(target_size, n), biggest + 1)
-        return _partition(
-            pool, sizes, reputation_bonus, time_limit_s, num_teams=n_teams
-        )
+        sizes = list(range(lo, hi + 1))
+        num_teams: Optional[int] = None
+        cover = "exact"
+    elif remainder_policy == "strict_best_fit":
+        num_teams = max(1, n // target_size)
+        biggest = n - (num_teams - 1) * target_size  # team that absorbs leftovers
+        sizes = list(range(min(target_size, n), biggest + 1))
+        cover = "exact"
+    elif remainder_policy == "strict_manual":
+        num_teams = n // target_size
+        sizes = [target_size]
+        cover = "at_most"
+    else:
+        raise NotImplementedError(f"remainder_policy {remainder_policy!r} not implemented")
+
+    # Exact CP-SAT enumerates every candidate team; past ~12k candidates that's
+    # too heavy for a small server, so fall back to a fast greedy heuristic.
+    candidates = sum(comb(n, k) for k in sizes if k <= n)
+    if candidates > _CANDIDATE_LIMIT:
+        return _greedy(pool, target_size, remainder_policy, reputation_bonus)
+    return _partition(
+        pool, sizes, reputation_bonus, time_limit_s, num_teams=num_teams, cover=cover
+    )
+
+
+_CANDIDATE_LIMIT = 12000
+
+
+def _greedy(
+    pool: List[Student],
+    target_size: int,
+    remainder_policy: str,
+    reputation_bonus: Optional[Callable[[Team], int]],
+) -> MatchResult:
+    """Fast heuristic for large rosters: anchor a team, greedily add the
+    best-fitting remaining students, then distribute any leftovers. Scales
+    linearly-ish, so it handles big classes the exact solver can't."""
+    t0 = time.perf_counter()
+
+    def score(team) -> int:
+        s = base_team_score(tuple(team))
+        if reputation_bonus is not None:
+            s += reputation_bonus(tuple(team))
+        return s
+
+    remaining = list(pool)
+    n = len(pool)
+    n_teams = n // target_size if remainder_policy == "strict_manual" else max(1, n // target_size)
+
+    teams: List[List[Student]] = []
+    for _ in range(n_teams):
+        if not remaining:
+            break
+        team = [remaining.pop(0)]
+        while len(team) < target_size and remaining:
+            best = max(remaining, key=lambda s: score(team + [s]))
+            team.append(best)
+            remaining.remove(best)
+        teams.append(team)
+
+    unplaced: List[Student] = []
     if remainder_policy == "strict_manual":
-        n = len(pool)
-        n_teams = n // target_size
-        return _partition(
-            pool, [target_size], reputation_bonus, time_limit_s,
-            num_teams=n_teams, cover="at_most",
-        )
-    raise NotImplementedError(f"remainder_policy {remainder_policy!r} not implemented")
+        unplaced = list(remaining)
+    else:  # absorb leftovers into the best-fitting team
+        for s in remaining:
+            bi = max(range(len(teams)), key=lambda i: score(teams[i] + [s]))
+            teams[bi].append(s)
+
+    formed = [tuple(t) for t in teams]
+    return MatchResult(
+        teams=formed,
+        unplaced=unplaced,
+        score=sum(base_team_score(t) for t in formed),
+        elapsed_s=time.perf_counter() - t0,
+    )
 
 
 def score_teams(teams: List[Team]) -> List[int]:

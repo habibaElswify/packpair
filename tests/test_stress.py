@@ -79,6 +79,17 @@ def test_thirty_student_class_places_everyone_quickly():
     assert result.elapsed_s < 5.0  # snappy enough for a live teacher action
 
 
+def test_large_roster_places_everyone_fast():
+    # 75 students: too many for exact CP-SAT (C(75,3)=67k) — must use the
+    # heuristic path and still place everyone quickly.
+    pool = synthetic_pool(75)
+    result = form_teams(pool, target_size=3, remainder_policy="strict_best_fit")
+    assert names_of(result) == {s.name for s in pool}
+    assert result.unplaced == []
+    assert all(len(t) >= 3 for t in result.teams)
+    assert result.elapsed_s < 5.0
+
+
 def test_disjoint_availability_still_places_everyone():
     # Every student free in a different single slot -> no schedule overlap at all.
     pool = [

@@ -328,6 +328,15 @@ export async function setEventState(eventId: string, state: string) {
   revalidatePath(`/events/${eventId}`);
 }
 
+export async function deleteEvent(eventId: string) {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+  // Cascades to members, profiles, teams, ratings (FK on delete cascade).
+  await admin.from("events").delete().eq("id", eventId);
+  redirect("/");
+}
+
 export async function saveRatings(eventId: string, formData: FormData) {
   const user = await requireUser();
   const admin = createAdminClient();

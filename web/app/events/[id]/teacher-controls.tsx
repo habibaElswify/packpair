@@ -8,6 +8,7 @@ import {
   formTeams,
   setEventState,
   simulateRatings,
+  deleteEvent,
 } from "@/app/actions";
 
 export function TeacherControls({
@@ -25,6 +26,22 @@ export function TeacherControls({
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function onDelete() {
+    if (
+      !confirm(
+        "Delete this event? Its roster, teams, and ratings are removed permanently. This can't be undone.",
+      )
+    )
+      return;
+    setDeleting(true);
+    try {
+      await deleteEvent(eventId);
+    } catch {
+      setDeleting(false);
+    }
+  }
 
   function run(label: string, fn: () => Promise<unknown>) {
     setError(null);
@@ -91,6 +108,13 @@ export function TeacherControls({
             View reputation →
           </Link>
         )}
+        <button
+          onClick={onDelete}
+          disabled={deleting || pending}
+          className="rounded-lg border border-[#f3c9ce] px-4 py-2 text-sm font-medium text-[#b7202f] transition hover:bg-[#fde7e9] disabled:opacity-50"
+        >
+          {deleting ? "Deleting…" : "Delete event"}
+        </button>
       </div>
       {error && (
         <p className="mt-3 rounded-lg bg-[#fde7e9] px-3 py-2 text-sm text-[#b7202f]">
