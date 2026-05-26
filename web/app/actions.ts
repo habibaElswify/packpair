@@ -380,29 +380,26 @@ export async function saveRatings(eventId: string, formData: FormData) {
   redirect(`/events/${eventId}/reputation`);
 }
 
-// Demo helper: reputation accrues across many projects over a quarter, so this
-// simulates accumulated peer-rating history — most students gather enough
-// ratings to disclose a k-anonymous average, while a couple stay "new"
-// (below k=5). Lets the Bayesian + k-anonymity layers show BOTH states.
-export async function simulateRatings(eventId: string) {
-  const user = await requireUser();
-  await requireOwner(eventId, user.id);
-  const admin = createAdminClient();
+// Realistic single-project peer ratings: only a student's ACTUAL teammates rate
+// them, so teams of 3 produce exactly 2 ratings per dimension. Reputation then
+// honestly shows "new" until ratings accumulate across multiple projects (k=5).
+async function regenerateTeammateRatings(
+  admin: ReturnType<typeof createAdminClient>,
+  eventId: string,
+) {
+  const { data: teams } = await admin.from("teams").select("id").eq("event_id", eventId);
+  const teamIds = new Set((teams ?? []).map((t) => t.id));
+  const { data: tms } = await admin.from("team_members").select("team_id, member_id");
+  const byTeam = new Map<string, string[]>();
+  for (const tm of tms ?? []) {
+    if (!teamIds.has(tm.team_id)) continue;
+    const l = byTeam.get(tm.team_id) ?? [];
+    l.push(tm.member_id);
+    byTeam.set(tm.team_id, l);
+  }
 
-  const { data: studentMembers } = await admin
-    .from("event_members")
-    .select("id")
-    .eq("event_id", eventId)
-    .eq("role", "student");
-  const ids = (studentMembers ?? []).map((m) => m.id);
-  if (ids.length < 2) return;
-
-  // Fresh simulation each time.
   await admin.from("ratings").delete().eq("event_id", eventId);
-
-  const pick = <T>(arr: T[], n: number) =>
-    [...arr].sort(() => Math.random() - 0.5).slice(0, n);
-
+  const quality = new Map<string, number>();
   const rows: {
     event_id: string;
     rater_member_id: string;
@@ -410,34 +407,38 @@ export async function simulateRatings(eventId: string) {
     dimension: string;
     stars: number;
   }[] = [];
-
-  ids.forEach((subject, idx) => {
-    const quality = 0.4 + Math.random() * 0.55;
-    // Leave the first two students "new" (few ratings); the rest accrue history.
-    const others = ids.filter((x) => x !== subject);
-    const historySize =
-      idx < 2
-        ? 2 + Math.floor(Math.random() * 2) // 2-3 → suppressed (< k=5)
-        : Math.min(others.length, 6 + Math.floor(Math.random() * 5)); // 6-10
-    for (const rater of pick(others, historySize)) {
-      for (const dim of DIMENSIONS) {
-        const noisy = Math.max(0, Math.min(1, quality + (Math.random() - 0.5) * 0.3));
-        rows.push({
-          event_id: eventId,
-          rater_member_id: rater,
-          subject_member_id: subject,
-          dimension: dim,
-          stars: Math.round(1 + 4 * noisy),
-        });
+  for (const ids of byTeam.values()) {
+    for (const id of ids)
+      if (!quality.has(id)) quality.set(id, 0.4 + Math.random() * 0.55);
+    for (const subject of ids) {
+      for (const rater of ids) {
+        if (rater === subject) continue; // only teammates, not self
+        for (const dim of DIMENSIONS) {
+          const noisy = Math.max(
+            0,
+            Math.min(1, quality.get(subject)! + (Math.random() - 0.5) * 0.3),
+          );
+          rows.push({
+            event_id: eventId,
+            rater_member_id: rater,
+            subject_member_id: subject,
+            dimension: dim,
+            stars: Math.round(1 + 4 * noisy),
+          });
+        }
       }
     }
-  });
-
-  if (rows.length) {
+  }
+  if (rows.length)
     await admin.from("ratings").upsert(rows, {
       onConflict: "event_id,rater_member_id,subject_member_id,dimension",
     });
-  }
+}
+
+export async function simulateRatings(eventId: string) {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  await regenerateTeammateRatings(createAdminClient(), eventId);
   revalidatePath(`/events/${eventId}/reputation`);
 }
 
@@ -553,31 +554,10 @@ export async function guestRegenerateAndForm() {
   revalidatePath("/demo");
 }
 
-// Run a fresh peer-rating round on the demo class.
+// Run a realistic teammate-only peer-rating round on the demo class.
 export async function guestSimulateRatings() {
   const { admin, ev } = await getDemoEvent();
-  const eventId = ev.id;
-  const { data: studentMembers } = await admin.from("event_members").select("id").eq("event_id", eventId).eq("role", "student");
-  const ids = (studentMembers ?? []).map((m) => m.id);
-  if (ids.length < 2) return;
-  await admin.from("ratings").delete().eq("event_id", eventId);
-
-  function pick<T>(arr: T[], k: number): T[] {
-    return [...arr].sort(() => Math.random() - 0.5).slice(0, k);
-  }
-  const rows: { event_id: string; rater_member_id: string; subject_member_id: string; dimension: string; stars: number }[] = [];
-  ids.forEach((subject, idx) => {
-    const quality = 0.4 + Math.random() * 0.55;
-    const others = ids.filter((x) => x !== subject);
-    const h = idx < 2 ? 2 + Math.floor(Math.random() * 2) : Math.min(others.length, 6 + Math.floor(Math.random() * 5));
-    for (const rater of pick(others, h)) {
-      for (const dim of DIMENSIONS) {
-        const noisy = Math.max(0, Math.min(1, quality + (Math.random() - 0.5) * 0.3));
-        rows.push({ event_id: eventId, rater_member_id: rater, subject_member_id: subject, dimension: dim, stars: Math.round(1 + 4 * noisy) });
-      }
-    }
-  });
-  if (rows.length) await admin.from("ratings").upsert(rows, { onConflict: "event_id,rater_member_id,subject_member_id,dimension" });
+  await regenerateTeammateRatings(admin, ev.id);
   revalidatePath("/demo");
 }
 
