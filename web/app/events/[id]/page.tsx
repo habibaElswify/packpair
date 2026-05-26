@@ -33,10 +33,11 @@ export default async function EventPage({
 
   const { data: members } = await supabase
     .from("event_members")
-    .select("id, roster_name, role")
+    .select("id, roster_name, role, user_id")
     .eq("event_id", id);
   const students = (members ?? []).filter((m) => m.role === "student");
   const nameById = new Map((members ?? []).map((m) => [m.id, m.roster_name]));
+  const myMember = (members ?? []).find((m) => m.user_id === user.id);
 
   const { data: teams } = await supabase
     .from("teams")
@@ -47,10 +48,14 @@ export default async function EventPage({
     .from("team_members")
     .select("team_id, member_id");
   const membersByTeam = new Map<string, string[]>();
+  const memberIdsByTeam = new Map<string, string[]>();
   for (const tm of teamMembers ?? []) {
-    const list = membersByTeam.get(tm.team_id) ?? [];
-    list.push(nameById.get(tm.member_id) ?? "—");
-    membersByTeam.set(tm.team_id, list);
+    const names = membersByTeam.get(tm.team_id) ?? [];
+    names.push(nameById.get(tm.member_id) ?? "—");
+    membersByTeam.set(tm.team_id, names);
+    const ids = memberIdsByTeam.get(tm.team_id) ?? [];
+    ids.push(tm.member_id);
+    memberIdsByTeam.set(tm.team_id, ids);
   }
 
   return (
@@ -76,6 +81,23 @@ export default async function EventPage({
           <TeacherControls eventId={id} studentCount={students.length} />
         )}
 
+        {!isOwner && myMember && (
+          <div className="flex items-center justify-between rounded-xl border border-[#e6e1ef] bg-white p-5">
+            <div>
+              <div className="font-semibold text-[#32235f]">You&apos;ve joined this event</div>
+              <div className="text-sm text-[#4a4a55]">
+                Keep your profile up to date so the AI places you well.
+              </div>
+            </div>
+            <Link
+              href={`/events/${id}/profile`}
+              className="rounded-lg bg-[#4b2e83] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#32235f]"
+            >
+              Edit your profile
+            </Link>
+          </div>
+        )}
+
         {(teams?.length ?? 0) > 0 ? (
           <div>
             <h2 className="mb-3 text-lg font-bold text-[#32235f]">
@@ -84,13 +106,27 @@ export default async function EventPage({
             <div className="grid gap-4 sm:grid-cols-2">
               {teams!.map((t) => {
                 const r = (t.rationale ?? {}) as Rationale;
+                const isMine =
+                  !!myMember &&
+                  (memberIdsByTeam.get(t.id) ?? []).includes(myMember.id);
                 return (
                   <div
                     key={t.id}
-                    className="rounded-xl border border-[#e6e1ef] bg-white p-5"
+                    className={`rounded-xl border bg-white p-5 ${
+                      isMine
+                        ? "border-2 border-[#ffc83d] ring-2 ring-[#ffc83d]/40"
+                        : "border-[#e6e1ef]"
+                    }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-bold text-[#32235f]">{t.label}</span>
+                      <span className="font-bold text-[#32235f]">
+                        {t.label}
+                        {isMine && (
+                          <span className="ml-2 rounded-full bg-[#ffc83d] px-2 py-0.5 text-xs font-bold text-[#32235f]">
+                            Your team
+                          </span>
+                        )}
+                      </span>
                       <span className="rounded-full bg-[#fff3d6] px-2 py-0.5 text-xs font-semibold text-[#7a5b00]">
                         score {t.score}
                       </span>

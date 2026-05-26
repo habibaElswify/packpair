@@ -125,6 +125,72 @@ export async function seedDemoStudents(eventId: string, n = 12) {
   revalidatePath(`/events/${eventId}`);
 }
 
+export async function joinEvent(formData: FormData) {
+  const user = await requireUser();
+  const admin = createAdminClient();
+  const code = String(formData.get("code") ?? "").trim().toUpperCase();
+  if (!code) throw new Error("Enter a join code");
+
+  const { data: event } = await admin
+    .from("events")
+    .select("id")
+    .eq("join_code", code)
+    .maybeSingle();
+  if (!event) throw new Error("No event found for that code");
+
+  const { data: existing } = await admin
+    .from("event_members")
+    .select("id")
+    .eq("event_id", event.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!existing) {
+    await admin.from("event_members").insert({
+      event_id: event.id,
+      user_id: user.id,
+      roster_name: user.email ?? "Student",
+      roster_email: user.email ?? `${user.id}@unknown`,
+      role: "student",
+      source: "join_code",
+    });
+  }
+  redirect(`/events/${event.id}/profile`);
+}
+
+export async function saveProfile(eventId: string, formData: FormData) {
+  const user = await requireUser();
+  const admin = createAdminClient();
+
+  const { data: member } = await admin
+    .from("event_members")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!member) throw new Error("You haven't joined this event");
+
+  const skills = formData.getAll("skills").map(String);
+  const topics = formData.getAll("topics").map(String);
+  const availability = formData.getAll("availability").map((v) => Number(v));
+  const commStyle = String(formData.get("comm_style") ?? "mixed");
+
+  await admin.from("student_profiles").upsert(
+    {
+      event_id: eventId,
+      member_id: member.id,
+      skills,
+      topics,
+      availability,
+      comm_style: commStyle,
+      complete: skills.length > 0 && availability.length > 0,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "event_id,member_id" },
+  );
+  redirect(`/events/${eventId}`);
+}
+
 export async function formTeams(eventId: string) {
   const user = await requireUser();
   const event = await requireOwner(eventId, user.id);
