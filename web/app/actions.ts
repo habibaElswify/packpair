@@ -47,6 +47,18 @@ export async function createEvent(formData: FormData) {
   const user = await requireUser();
   const admin = createAdminClient();
 
+  // Only verified instructors (or app admins) may create events.
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("is_instructor, is_app_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!prof?.is_instructor && !prof?.is_app_admin) {
+    throw new Error(
+      "Only verified instructors can create events. Verify your instructor status first.",
+    );
+  }
+
   const courseLabel = String(formData.get("course_label") ?? "").trim();
   const targetSize = Number(formData.get("target_team_size") ?? 3);
   const remainderPolicy = String(formData.get("remainder_policy") ?? "strict_best_fit");
@@ -440,6 +452,27 @@ export async function simulateRatings(eventId: string) {
   await requireOwner(eventId, user.id);
   await regenerateTeammateRatings(createAdminClient(), eventId);
   revalidatePath(`/events/${eventId}/reputation`);
+}
+
+// Instructor gate: verify the signed-in user teaches/TAs a Canvas course. If
+// Canvas confirms a Teacher/TA enrollment, flag them as an instructor (so they
+// can create events). Returns the number of taught courses (0 = not verified).
+export async function verifyInstructor(
+  baseUrl: string,
+  token: string,
+): Promise<number> {
+  const user = await requireUser();
+  const admin = createAdminClient();
+  const base = baseUrl?.trim() || DEFAULT_CANVAS_BASE;
+  await admin.from("canvas_links").upsert(
+    { user_id: user.id, canvas_base_url: base, access_token: token },
+    { onConflict: "user_id" },
+  );
+  const courses = await getTaughtCourses(base, token);
+  if (courses.length > 0) {
+    await admin.from("profiles").update({ is_instructor: true }).eq("id", user.id);
+  }
+  return courses.length;
 }
 
 // Canvas: verify the user is a teacher (returns their taught courses) and save

@@ -20,6 +20,13 @@ export default async function Home() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_instructor, is_app_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  const canCreate = !!(profile?.is_instructor || profile?.is_app_admin);
+
   const { data: events } = await supabase
     .from("events")
     .select("id, course_label, state, target_team_size, join_code, owner_id, created_at")
@@ -51,14 +58,25 @@ export default async function Home() {
             >
               Join with code
             </Link>
-            <Link
-              href="/events/new"
-              className="rounded-lg bg-[#4b2e83] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#32235f]"
-            >
-              + Create event
-            </Link>
+            {canCreate && (
+              <Link
+                href="/events/new"
+                className="rounded-lg bg-[#4b2e83] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#32235f]"
+              >
+                + Create event
+              </Link>
+            )}
           </div>
         </div>
+
+        {!canCreate && (
+          <div className="mb-6 rounded-xl border border-[#e6e1ef] bg-white p-4 text-sm text-[#4a4a55]">
+            Students: join your class with the code from your instructor.{" "}
+            <Link href="/instructor" className="font-medium text-[#4b2e83] underline">
+              Are you an instructor? Verify with Canvas to create events →
+            </Link>
+          </div>
+        )}
 
         {!events || events.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#d8cfe9] bg-white p-10 text-center text-[#4a4a55]">

@@ -14,6 +14,13 @@ export default async function NewEventPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_instructor, is_app_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile?.is_instructor && !profile?.is_app_admin) redirect("/instructor");
+
   return (
     <main className="min-h-screen bg-[#f7f5fb]">
       <header className="border-b-4 border-[#ffc83d] bg-[#4b2e83] px-7 py-3 text-white">
