@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DemoControls } from "./demo-controls";
 
 // PUBLIC, read-only showcase — no login. Renders the real AI-formed teams +
 // reputation from the most recent sample event, so a grader/teacher can open
@@ -97,6 +98,8 @@ export default async function DemoPage() {
           maximizing skill diversity, schedule overlap, and shared interests.
           Every student placed.
         </p>
+
+        <DemoControls />
 
         <div className="mb-10 grid gap-4 sm:grid-cols-2">
           {(teams ?? []).map((t) => {

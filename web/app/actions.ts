@@ -359,6 +359,98 @@ export async function importCanvasRoster(
   return added;
 }
 
+// ── Public demo sandbox (NO login) — operates only on the is_demo event ──
+
+async function getDemoEvent() {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("events")
+    .select("id, is_demo, target_team_size, remainder_policy, min_size, max_size")
+    .eq("is_demo", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data?.is_demo) throw new Error("No demo sandbox available");
+  return { admin, ev: data };
+}
+
+// Generate a fresh random class and run the real CP-SAT solver on it.
+export async function guestRegenerateAndForm() {
+  const { admin, ev } = await getDemoEvent();
+  const eventId = ev.id;
+  await admin.from("ratings").delete().eq("event_id", eventId);
+  await admin.from("teams").delete().eq("event_id", eventId);
+  await admin.from("student_profiles").delete().eq("event_id", eventId);
+  await admin.from("event_members").delete().eq("event_id", eventId).eq("role", "student");
+
+  const seed = Math.floor(Math.random() * 100000);
+  const dres = await fetch(`${SOLVER}/demo/students?n=12&seed=${seed}`, { cache: "no-store" });
+  if (!dres.ok) throw new Error("Could not reach the solver");
+  const { students } = (await dres.json()) as {
+    students: { name: string; skills: string[]; availability: number[]; comm_style: string; topics: string[] }[];
+  };
+
+  const payload: { name: string; skills: string[]; availability: number[]; comm_style: string; topics: string[] }[] = [];
+  for (const s of students) {
+    const { data: m } = await admin
+      .from("event_members")
+      .insert({ event_id: eventId, roster_name: s.name, roster_email: `${s.name.toLowerCase()}@demo.packpair`, role: "student", source: "seed" })
+      .select("id")
+      .single();
+    if (!m) continue;
+    await admin.from("student_profiles").insert({
+      event_id: eventId, member_id: m.id, skills: s.skills, availability: s.availability, comm_style: s.comm_style, topics: s.topics, complete: true,
+    });
+    payload.push({ name: m.id, skills: s.skills, availability: s.availability, comm_style: s.comm_style, topics: s.topics });
+  }
+
+  const mres = await fetch(`${SOLVER}/match`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ students: payload, target_size: ev.target_team_size, remainder_policy: ev.remainder_policy, min_size: ev.min_size, max_size: ev.max_size }),
+  });
+  if (!mres.ok) throw new Error("Solver failed");
+  const result = (await mres.json()) as { teams: { members: string[]; score: number; rationale: Record<string, unknown> }[] };
+
+  let n = 1;
+  for (const t of result.teams) {
+    const { data: team } = await admin.from("teams").insert({ event_id: eventId, label: `Team ${n++}`, score: t.score, rationale: t.rationale }).select("id").single();
+    if (!team) continue;
+    await admin.from("team_members").insert(t.members.map((mid) => ({ team_id: team.id, member_id: mid })));
+  }
+  await admin.from("events").update({ state: "matched" }).eq("id", eventId);
+  revalidatePath("/demo");
+}
+
+// Run a fresh peer-rating round on the demo class.
+export async function guestSimulateRatings() {
+  const { admin, ev } = await getDemoEvent();
+  const eventId = ev.id;
+  const { data: studentMembers } = await admin.from("event_members").select("id").eq("event_id", eventId).eq("role", "student");
+  const ids = (studentMembers ?? []).map((m) => m.id);
+  if (ids.length < 2) return;
+  await admin.from("ratings").delete().eq("event_id", eventId);
+
+  function pick<T>(arr: T[], k: number): T[] {
+    return [...arr].sort(() => Math.random() - 0.5).slice(0, k);
+  }
+  const rows: { event_id: string; rater_member_id: string; subject_member_id: string; dimension: string; stars: number }[] = [];
+  ids.forEach((subject, idx) => {
+    const quality = 0.4 + Math.random() * 0.55;
+    const others = ids.filter((x) => x !== subject);
+    const h = idx < 2 ? 2 + Math.floor(Math.random() * 2) : Math.min(others.length, 6 + Math.floor(Math.random() * 5));
+    for (const rater of pick(others, h)) {
+      for (const dim of DIMENSIONS) {
+        const noisy = Math.max(0, Math.min(1, quality + (Math.random() - 0.5) * 0.3));
+        rows.push({ event_id: eventId, rater_member_id: rater, subject_member_id: subject, dimension: dim, stars: Math.round(1 + 4 * noisy) });
+      }
+    }
+  });
+  if (rows.length) await admin.from("ratings").upsert(rows, { onConflict: "event_id,rater_member_id,subject_member_id,dimension" });
+  revalidatePath("/demo");
+}
+
 export async function formTeams(eventId: string) {
   const user = await requireUser();
   const event = await requireOwner(eventId, user.id);
