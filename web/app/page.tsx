@@ -23,6 +23,7 @@ export default async function Home() {
   const { data: events } = await supabase
     .from("events")
     .select("id, course_label, state, target_team_size, join_code, owner_id, created_at")
+    .eq("is_demo", false) // the public demo sandbox never shows on dashboards
     .order("created_at", { ascending: false });
 
   return (
