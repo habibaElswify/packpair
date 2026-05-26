@@ -144,14 +144,36 @@ export async function joinEvent(formData: FormData) {
     .maybeSingle();
   if (!event) throw new Error("No event found for that code");
 
+  const email = (user.email ?? "").toLowerCase();
+
+  // Already joined?
   const { data: existing } = await admin
     .from("event_members")
     .select("id")
     .eq("event_id", event.id)
     .eq("user_id", user.id)
     .maybeSingle();
+  if (existing) redirect(`/events/${event.id}/profile`);
 
-  if (!existing) {
+  // If the instructor imported a roster, ONLY emails on that roster may join.
+  const { data: roster } = await admin
+    .from("event_members")
+    .select("id, roster_email, user_id")
+    .eq("event_id", event.id)
+    .in("source", ["csv", "canvas"]);
+
+  if (roster && roster.length > 0) {
+    const seat = roster.find((r) => (r.roster_email ?? "").toLowerCase() === email);
+    if (!seat) {
+      throw new Error(
+        "Your UW email isn't on this class's roster. Ask your instructor to add you.",
+      );
+    }
+    if (!seat.user_id) {
+      await admin.from("event_members").update({ user_id: user.id }).eq("id", seat.id);
+    }
+  } else {
+    // No roster imported → open join by code.
     await admin.from("event_members").insert({
       event_id: event.id,
       user_id: user.id,
@@ -162,6 +184,96 @@ export async function joinEvent(formData: FormData) {
     });
   }
   redirect(`/events/${event.id}/profile`);
+}
+
+// Parse one CSV line, honoring double-quoted fields (e.g. "Patel, Maya").
+function parseCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"') {
+        if (line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else inQ = false;
+      } else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") {
+      out.push(cur);
+      cur = "";
+    } else cur += c;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+function toEmail(loginId: string): string {
+  const v = loginId.trim();
+  return v.includes("@") ? v.toLowerCase() : `${v.toLowerCase()}@uw.edu`;
+}
+
+// Verified roster import. Accepts EITHER a Canvas Gradebook CSV export
+// (header with "SIS Login ID") — names + NetIDs are pulled out, grade columns
+// ignored — OR a simple list ("email", "Name, email", "netid", "Name, netid").
+export async function importRosterText(eventId: string, formData: FormData) {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+
+  const raw = String(formData.get("roster") ?? "");
+  const lines = raw.split(/\r?\n/).filter((l) => l.trim());
+  const entries: { name: string; email: string }[] = [];
+
+  const header = lines[0] ? parseCsvLine(lines[0]) : [];
+  const sisIdx = header.findIndex((h) => /sis login id/i.test(h));
+
+  if (sisIdx >= 0) {
+    // Canvas Gradebook export.
+    const studentIdx = header.findIndex((h) => /^student$/i.test(h));
+    for (const line of lines.slice(1)) {
+      const cols = parseCsvLine(line);
+      const sis = (cols[sisIdx] ?? "").trim();
+      const student = (cols[studentIdx] ?? "").trim();
+      if (!sis) continue; // skips "Points Possible" and blank rows
+      if (/test student/i.test(student)) continue;
+      let name = student;
+      if (student.includes(",")) {
+        const [last, first] = student.split(",").map((s) => s.trim());
+        name = `${first} ${last}`.trim();
+      }
+      const email = toEmail(sis);
+      entries.push({ name: name || email.split("@")[0], email });
+    }
+  } else {
+    // Simple list.
+    for (const line of lines.map((l) => l.trim())) {
+      const m = line.match(/[\w.+-]+@[\w.-]+\.\w+/);
+      if (m) {
+        const email = m[0].toLowerCase();
+        const name = line.replace(m[0], "").replace(/[,\t]+/g, " ").trim() || email.split("@")[0];
+        entries.push({ name, email });
+      } else {
+        const parts = line.split(/[,\t]+/).map((s) => s.trim()).filter(Boolean);
+        const last = (parts[parts.length - 1] ?? "").split(/\s+/).pop() ?? "";
+        if (!/^[a-zA-Z0-9._-]+$/.test(last)) continue;
+        entries.push({ name: parts.length > 1 ? parts.slice(0, -1).join(" ") : last, email: toEmail(last) });
+      }
+    }
+  }
+
+  for (const e of entries) {
+    await admin.from("event_members").insert({
+      event_id: eventId,
+      roster_name: e.name,
+      roster_email: e.email,
+      role: "student",
+      source: "csv",
+    });
+  }
+  redirect(`/events/${eventId}`);
 }
 
 export async function saveProfile(eventId: string, formData: FormData) {
