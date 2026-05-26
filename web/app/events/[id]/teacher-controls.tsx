@@ -57,6 +57,9 @@ export function TeacherControls({
         >
           {busy === "seed" ? "Seeding…" : "Seed 12 demo students"}
         </button>
+        <Link href={`/events/${eventId}/canvas`} className={btn}>
+          Import from Canvas
+        </Link>
         <button
           disabled={pending || studentCount < 2}
           onClick={() => run("match", () => formTeams(eventId))}

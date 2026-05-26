@@ -4,6 +4,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getTaughtCourses,
+  getCourseRoster,
+  DEFAULT_CANVAS_BASE,
+  type TaughtCourse,
+} from "@/lib/canvas";
 
 const SOLVER = process.env.NEXT_PUBLIC_SOLVER_API_URL ?? "http://localhost:8000";
 
@@ -303,6 +309,54 @@ export async function simulateRatings(eventId: string) {
     });
   }
   revalidatePath(`/events/${eventId}/reputation`);
+}
+
+// Canvas: verify the user is a teacher (returns their taught courses) and save
+// their token. An empty list means Canvas doesn't see them as a teacher.
+export async function listTaughtCourses(
+  baseUrl: string,
+  token: string,
+): Promise<TaughtCourse[]> {
+  const user = await requireUser();
+  const admin = createAdminClient();
+  const base = baseUrl?.trim() || DEFAULT_CANVAS_BASE;
+  await admin.from("canvas_links").upsert(
+    { user_id: user.id, canvas_base_url: base, access_token: token },
+    { onConflict: "user_id" },
+  );
+  return getTaughtCourses(base, token);
+}
+
+// Canvas: pull a course's student roster into the event (the "magic" import).
+export async function importCanvasRoster(
+  eventId: string,
+  courseId: number,
+  baseUrl: string,
+  token: string,
+): Promise<number> {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+  const base = baseUrl?.trim() || DEFAULT_CANVAS_BASE;
+
+  const roster = await getCourseRoster(base, token, courseId);
+  let added = 0;
+  for (const r of roster) {
+    const { error } = await admin.from("event_members").insert({
+      event_id: eventId,
+      roster_name: r.name,
+      roster_email: r.email,
+      role: "student",
+      source: "canvas",
+    });
+    if (!error) added++; // skip duplicates (unique on event_id, roster_email)
+  }
+  await admin
+    .from("events")
+    .update({ canvas_course_id: String(courseId) })
+    .eq("id", eventId);
+  revalidatePath(`/events/${eventId}`);
+  return added;
 }
 
 export async function formTeams(eventId: string) {
