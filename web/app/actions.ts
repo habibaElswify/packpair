@@ -187,7 +187,10 @@ export async function joinEvent(formData: FormData) {
 }
 
 // Parse one CSV line, honoring double-quoted fields (e.g. "Patel, Maya").
-function parseCsvLine(line: string): string[] {
+// Split a line on the given delimiter, honoring double-quoted fields. Handles
+// both comma CSV (downloaded export) and tab-separated (columns copied from a
+// spreadsheet, where names like "Patel, Maya" are NOT quoted).
+function splitLine(line: string, delim: string): string[] {
   const out: string[] = [];
   let cur = "";
   let inQ = false;
@@ -201,7 +204,7 @@ function parseCsvLine(line: string): string[] {
         } else inQ = false;
       } else cur += c;
     } else if (c === '"') inQ = true;
-    else if (c === ",") {
+    else if (c === delim) {
       out.push(cur);
       cur = "";
     } else cur += c;
@@ -231,18 +234,20 @@ export async function importRosterText(eventId: string, formData: FormData) {
   const lines = raw.split(/\r?\n/).filter((l) => l.trim());
   const entries: { name: string; email: string }[] = [];
 
-  const header = lines[0] ? parseCsvLine(lines[0]) : [];
-  const sisIdx = header.findIndex((h) => /sis login id/i.test(h));
+  // Columns copied from a spreadsheet are tab-separated; a downloaded CSV is commas.
+  const delim = (lines[0] ?? "").includes("\t") ? "\t" : ",";
+  const header = lines[0] ? splitLine(lines[0], delim) : [];
+  const sisIdx = header.findIndex((h) => /^sis login id$/i.test(h.trim()));
 
   if (sisIdx >= 0) {
-    // Canvas Gradebook export.
-    const studentIdx = header.findIndex((h) => /^student$/i.test(h));
+    // Canvas Gradebook export — use the SIS Login ID column (the NetID).
+    const studentIdx = header.findIndex((h) => /^student$/i.test(h.trim()));
     for (const line of lines.slice(1)) {
-      const cols = parseCsvLine(line);
+      const cols = splitLine(line, delim);
       const sis = (cols[sisIdx] ?? "").trim();
-      const student = (cols[studentIdx] ?? "").trim();
+      const student = (studentIdx >= 0 ? cols[studentIdx] ?? "" : "").trim();
       if (!sis) continue; // skips "Points Possible" and blank rows
-      if (/test student/i.test(student)) continue;
+      if (/test student/i.test(student) || /^points possible$/i.test(student)) continue;
       let name = student;
       if (student.includes(",")) {
         const [last, first] = student.split(",").map((s) => s.trim());
