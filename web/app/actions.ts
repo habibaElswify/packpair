@@ -223,7 +223,11 @@ export async function importRosterText(eventId: string, formData: FormData) {
   await requireOwner(eventId, user.id);
   const admin = createAdminClient();
 
-  const raw = String(formData.get("roster") ?? "");
+  let raw = String(formData.get("roster") ?? "");
+  const file = formData.get("file");
+  if (file && typeof file !== "string" && file.size > 0) {
+    raw = await file.text(); // uploaded CSV takes precedence over pasted text
+  }
   const lines = raw.split(/\r?\n/).filter((l) => l.trim());
   const entries: { name: string; email: string }[] = [];
 

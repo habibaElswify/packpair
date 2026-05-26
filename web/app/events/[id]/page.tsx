@@ -34,9 +34,10 @@ export default async function EventPage({
 
   const { data: members } = await supabase
     .from("event_members")
-    .select("id, roster_name, role, user_id")
+    .select("id, roster_name, roster_email, role, user_id")
     .eq("event_id", id);
   const students = (members ?? []).filter((m) => m.role === "student");
+  const joinedCount = students.filter((m) => m.user_id).length;
   const nameById = new Map((members ?? []).map((m) => [m.id, m.roster_name]));
   const myMember = (members ?? []).find((m) => m.user_id === user.id);
 
@@ -116,6 +117,38 @@ export default async function EventPage({
                   View reputation
                 </Link>
               )}
+            </div>
+          </div>
+        )}
+
+        {isOwner && students.length > 0 && (
+          <div className="rounded-xl border border-[#e6e1ef] bg-white p-5">
+            <h2 className="mb-3 font-semibold text-[#32235f]">
+              Roster — {students.length} students
+              <span className="ml-2 text-sm font-normal text-[#4a4a55]">
+                ({joinedCount} joined · {students.length - joinedCount} invited)
+              </span>
+            </h2>
+            <div className="max-h-72 overflow-auto rounded-lg border border-[#f0ecf7]">
+              <ul className="divide-y divide-[#f0ecf7] text-sm">
+                {students.map((m) => (
+                  <li key={m.id} className="flex items-center justify-between px-3 py-2">
+                    <span className="text-[#1b1b1f]">
+                      {m.roster_name}{" "}
+                      <span className="text-[#4a4a55]">· {m.roster_email}</span>
+                    </span>
+                    {m.user_id ? (
+                      <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-xs font-medium text-[#1f7a3a]">
+                        joined
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-[#efeaf7] px-2 py-0.5 text-xs text-[#4b2e83]">
+                        invited
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         )}

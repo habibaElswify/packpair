@@ -54,11 +54,22 @@ export default async function CanvasPage({
             per line.)
           </p>
           <form action={importRosterText.bind(null, id)} className="space-y-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[#1b1b1f]">
+                Upload the gradebook CSV
+              </label>
+              <input
+                type="file"
+                name="file"
+                accept=".csv,text/csv"
+                className="block w-full text-sm text-[#4a4a55] file:mr-3 file:rounded-lg file:border-0 file:bg-[#efeaf7] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#4b2e83]"
+              />
+            </div>
+            <div className="text-center text-xs text-[#4a4a55]">— or paste it —</div>
             <textarea
               name="roster"
-              required
-              rows={8}
-              placeholder={"mpatel@uw.edu\njchen\nSara Ahmed, sahmed@uw.edu"}
+              rows={7}
+              placeholder={"Paste the gradebook CSV, or:\nmpatel@uw.edu\njchen\nSara Ahmed, sahmed@uw.edu"}
               className="w-full rounded-lg border border-[#d8cfe9] px-3 py-2 font-mono text-sm"
             />
             <button
