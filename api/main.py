@@ -25,7 +25,7 @@ from api.schemas import (
 from solver.matcher import Team, form_teams, score_teams
 from solver.privacy import RollingAggregator
 from solver.reputation import ReputationStore
-from solver.students import Student
+from solver.students import Student, synthetic_pool
 
 app = FastAPI(title="PackPair Solver", version="1.0.0")
 
@@ -44,6 +44,25 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/demo/students")
+def demo_students(n: int = 12, seed: int = 7) -> dict:
+    """Synthetic roster for seeding a Demo Class (testing + demo without
+    needing real signups). Reuses the same generator the solver tests use."""
+    pool = synthetic_pool(n, seed=seed)
+    return {
+        "students": [
+            {
+                "name": s.name,
+                "skills": sorted(s.skills),
+                "availability": sorted(s.available),
+                "comm_style": s.comm_style,
+                "topics": sorted(s.topics),
+            }
+            for s in pool
+        ]
+    }
 
 
 def _rationale(team: Team) -> TeamRationale:

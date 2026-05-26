@@ -70,6 +70,17 @@ def test_match_returns_leftovers_under_strict_manual():
     assert len(data["teams"]) == 3
 
 
+def test_demo_students_returns_varied_roster():
+    resp = client.get("/demo/students?n=12")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["students"]) == 12
+    s = data["students"][0]
+    assert set(s.keys()) >= {"name", "skills", "availability", "comm_style", "topics"}
+    # varied, not all identical
+    assert len({tuple(sorted(x["skills"])) for x in data["students"]}) > 1
+
+
 def test_reputation_summarizes_and_suppresses_below_k():
     ratings = [
         {"subject": "HIGH", "dimension": "participation", "stars": 5}
