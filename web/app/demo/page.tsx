@@ -55,16 +55,24 @@ export default async function DemoPage() {
     : { data: [] as { subject_member_id: string; dimension: string; stars: number }[] };
   let subjects: Record<string, { composite: number; by_dimension: Record<string, { public: number | null; n: number }> }> = {};
   if (ratings && ratings.length) {
-    const res = await fetch(`${SOLVER}/reputation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-      body: JSON.stringify({
-        k: 5,
-        ratings: ratings.map((r) => ({ subject: r.subject_member_id, dimension: r.dimension, stars: r.stars })),
-      }),
-    });
-    if (res.ok) subjects = (await res.json()).subjects ?? {};
+    // The solver is the only thing that can be cold (free tier sleeps). Give it
+    // a short timeout and fall back to showing teams without reputation, so the
+    // page always loads fast instead of hanging on a cold start.
+    try {
+      const res = await fetch(`${SOLVER}/reputation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(4000),
+        body: JSON.stringify({
+          k: 5,
+          ratings: ratings.map((r) => ({ subject: r.subject_member_id, dimension: r.dimension, stars: r.stars })),
+        }),
+      });
+      if (res.ok) subjects = (await res.json()).subjects ?? {};
+    } catch {
+      // solver cold/unavailable — render teams only
+    }
   }
   const repRows = Object.entries(subjects).sort((a, b) => b[1].composite - a[1].composite).slice(0, 6);
 
