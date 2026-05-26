@@ -9,6 +9,14 @@ from api.main import app
 client = TestClient(app)
 
 
+def test_root_returns_service_info():
+    resp = client.get("/")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["service"] == "PackPair Solver"
+    assert "/health" in body.values()
+
+
 def test_health_returns_ok():
     resp = client.get("/health")
     assert resp.status_code == 200

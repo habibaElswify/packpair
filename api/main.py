@@ -41,6 +41,16 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root() -> dict:
+    return {
+        "service": "PackPair Solver",
+        "status": "ok",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
