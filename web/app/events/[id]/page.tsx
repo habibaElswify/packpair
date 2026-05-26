@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TeacherControls } from "./teacher-controls";
+import { RealtimeRefresh } from "./realtime-refresh";
 
 type Rationale = {
   skills_covered?: string[];
@@ -60,6 +61,7 @@ export default async function EventPage({
 
   return (
     <main className="min-h-screen bg-[#f7f5fb]">
+      <RealtimeRefresh eventId={id} />
       <header className="border-b-4 border-[#ffc83d] bg-[#4b2e83] px-7 py-3 text-white">
         <Link href="/" className="text-sm opacity-90 hover:opacity-100">
           ← Back to events
