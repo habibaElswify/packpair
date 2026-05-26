@@ -244,25 +244,29 @@ export async function saveRatings(eventId: string, formData: FormData) {
   redirect(`/events/${eventId}/reputation`);
 }
 
-// Demo helper: generate plausible peer ratings among seeded students so the
-// Bayesian reputation + k-anonymity layers can be shown without 30 real raters.
+// Demo helper: reputation accrues across many projects over a quarter, so this
+// simulates accumulated peer-rating history — most students gather enough
+// ratings to disclose a k-anonymous average, while a couple stay "new"
+// (below k=5). Lets the Bayesian + k-anonymity layers show BOTH states.
 export async function simulateRatings(eventId: string) {
   const user = await requireUser();
   await requireOwner(eventId, user.id);
   const admin = createAdminClient();
 
-  const { data: teamMembers } = await admin
-    .from("team_members")
-    .select("team_id, member_id");
-  const byTeam = new Map<string, string[]>();
-  for (const tm of teamMembers ?? []) {
-    const list = byTeam.get(tm.team_id) ?? [];
-    list.push(tm.member_id);
-    byTeam.set(tm.team_id, list);
-  }
+  const { data: studentMembers } = await admin
+    .from("event_members")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("role", "student");
+  const ids = (studentMembers ?? []).map((m) => m.id);
+  if (ids.length < 2) return;
 
-  // Give each member a hidden "true quality"; ratings cluster around it.
-  const quality = new Map<string, number>();
+  // Fresh simulation each time.
+  await admin.from("ratings").delete().eq("event_id", eventId);
+
+  const pick = <T>(arr: T[], n: number) =>
+    [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+
   const rows: {
     event_id: string;
     rater_member_id: string;
@@ -270,26 +274,29 @@ export async function simulateRatings(eventId: string) {
     dimension: string;
     stars: number;
   }[] = [];
-  for (const ids of byTeam.values()) {
-    for (const id of ids)
-      if (!quality.has(id)) quality.set(id, 0.4 + Math.random() * 0.55);
-    for (const rater of ids) {
-      for (const subject of ids) {
-        if (rater === subject) continue;
-        for (const dim of DIMENSIONS) {
-          const q = quality.get(subject)!;
-          const noisy = Math.max(0, Math.min(1, q + (Math.random() - 0.5) * 0.3));
-          rows.push({
-            event_id: eventId,
-            rater_member_id: rater,
-            subject_member_id: subject,
-            dimension: dim,
-            stars: Math.round(1 + 4 * noisy),
-          });
-        }
+
+  ids.forEach((subject, idx) => {
+    const quality = 0.4 + Math.random() * 0.55;
+    // Leave the first two students "new" (few ratings); the rest accrue history.
+    const others = ids.filter((x) => x !== subject);
+    const historySize =
+      idx < 2
+        ? 2 + Math.floor(Math.random() * 2) // 2-3 → suppressed (< k=5)
+        : Math.min(others.length, 6 + Math.floor(Math.random() * 5)); // 6-10
+    for (const rater of pick(others, historySize)) {
+      for (const dim of DIMENSIONS) {
+        const noisy = Math.max(0, Math.min(1, quality + (Math.random() - 0.5) * 0.3));
+        rows.push({
+          event_id: eventId,
+          rater_member_id: rater,
+          subject_member_id: subject,
+          dimension: dim,
+          stars: Math.round(1 + 4 * noisy),
+        });
       }
     }
-  }
+  });
+
   if (rows.length) {
     await admin.from("ratings").upsert(rows, {
       onConflict: "event_id,rater_member_id,subject_member_id,dimension",
