@@ -292,16 +292,57 @@
     </span>
   </div>
   <nav>
+    <a href="https://packpair.vercel.app/demo" target="_blank">Live demo</a>
+    <a href="https://packpair.vercel.app" target="_blank">Open app</a>
     <a href="https://github.com/habibaElswify/packpair" target="_blank">Code</a>
     <a href="about.html">About</a>
   </nav>
 </header>
 
+<!-- Live deployment banner: the real app, end-to-end -->
+<section style="background:linear-gradient(135deg,#4b2e83,#32235f);color:white;padding:28px 32px;border-bottom:4px solid #ffc83d;">
+  <div style="max-width:960px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px;">
+    <div>
+      <div style="font-size:13px;letter-spacing:1.5px;color:#ffc83d;font-weight:700;">DEPLOYED · END-TO-END · LIVE</div>
+      <div style="font-size:22px;font-weight:700;margin-top:4px;">The real PackPair app is running.</div>
+      <div style="font-size:14px;opacity:0.88;margin-top:4px;">Three real AI layers · real Google sign-in (uw.edu) · real database · roster-gated joins.</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <a href="https://packpair.vercel.app/demo" style="background:#ffc83d;color:#32235f;padding:12px 22px;border-radius:999px;font-weight:700;text-decoration:none;">Open the live demo →</a>
+      <a href="https://packpair.vercel.app" style="background:transparent;color:white;padding:12px 22px;border-radius:999px;font-weight:700;text-decoration:none;border:1.5px solid rgba(255,255,255,0.5);">Sign in (UW) →</a>
+    </div>
+  </div>
+</section>
+
+<!-- Three AI layers — central, not a sidecar -->
+<section style="max-width:960px;margin:32px auto 0;padding:0 24px;">
+  <div style="background:white;border:1px solid #e6e1ef;border-radius:14px;padding:22px 26px;">
+    <h2 style="margin:0 0 10px;font-size:20px;color:#32235f;">Three AI layers, all central — not a chatbot side-feature</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;font-size:14px;color:#4a4a55;">
+      <div>
+        <div style="font-weight:700;color:#1b1b1f;margin-bottom:4px;">1 · Search (CSP)</div>
+        Google OR-Tools CP-SAT integer program over a weighted objective (skill diversity + schedule overlap + topic alignment + comm fit). Exact for small classes; greedy fast-path for large.
+      </div>
+      <div>
+        <div style="font-weight:700;color:#1b1b1f;margin-bottom:4px;">2 · Reasoning under uncertainty (Bayesian)</div>
+        Beta(α,β) per-dimension posteriors. Neutral Beta(1,1) prior solves cold-start; conjugate updates from 1–5 peer ratings sharpen the curve.
+      </div>
+      <div>
+        <div style="font-weight:700;color:#1b1b1f;margin-bottom:4px;">3 · Privacy (k-anonymity)</div>
+        Public reputation suppressed until ≥5 ratings back it — prevents re-identification of small-team raters.
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:13px;color:#4a4a55;">
+      Architecture: Next.js · Supabase (Postgres + RLS + Realtime) · FastAPI solver. <a href="about.html" style="color:#4b2e83;font-weight:600;">Read the full architecture →</a>
+    </div>
+  </div>
+</section>
+
 <main>
 
 <div class="lede">
   <h1>Find your project team.</h1>
-  <p>Tell PackPair about you — get an AI-formed team for your next UW class project.</p>
+  <p>The interactive walkthrough below is a mockup for click-through use. The <a href="https://packpair.vercel.app/demo" style="color:#4b2e83;font-weight:600;">real deployed demo</a> at <code>packpair.vercel.app/demo</code> runs the real AI service.</p>
 </div>
 
 <!-- STEP 1 -->
