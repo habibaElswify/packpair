@@ -142,10 +142,27 @@ export default async function ReputationPage({
                               {v.n} ratings · Bayesian mean{" "}
                               {(v.mean * 5).toFixed(2)}
                             </div>
+                            {/* 95% credible interval bar (wider = less data) */}
+                            <div
+                              className="relative mt-1 h-1.5 rounded-full bg-[#efeaf7]"
+                              title={`95% CI: ${(v.ci_low * 5).toFixed(2)} – ${(v.ci_high * 5).toFixed(2)} / 5`}
+                            >
+                              <div
+                                className="absolute h-1.5 rounded-full bg-[#b7a57a]"
+                                style={{
+                                  left: `${v.ci_low * 100}%`,
+                                  width: `${(v.ci_high - v.ci_low) * 100}%`,
+                                }}
+                              />
+                              <div
+                                className="absolute -top-0.5 h-2.5 w-0.5 bg-[#4b2e83]"
+                                style={{ left: `${v.mean * 100}%` }}
+                              />
+                            </div>
                           </>
                         ) : (
                           <div className="mt-1 text-xs italic text-[#b7202f]">
-                            new — too few ratings to disclose ({v?.n ?? 0})
+                            need 5 ratings to disclose (have {v?.n ?? 0})
                           </div>
                         )}
                       </div>

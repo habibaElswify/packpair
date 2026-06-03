@@ -80,7 +80,22 @@ export default async function Home() {
 
         {!events || events.length === 0 ? (
           <div className="rounded-xl border border-dashed border-[#d8cfe9] bg-white p-10 text-center text-[#4a4a55]">
-            No events yet. Create one to form teams for a class.
+            <div className="mb-3">No events yet.</div>
+            {canCreate ? (
+              <Link
+                href="/events/new"
+                className="inline-block rounded-lg bg-[#4b2e83] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#32235f]"
+              >
+                + Create your first event
+              </Link>
+            ) : (
+              <Link
+                href="/join"
+                className="inline-block rounded-lg border border-[#4b2e83] px-5 py-2 text-sm font-semibold text-[#4b2e83] transition hover:bg-[#efeaf7]"
+              >
+                Join your class with a code →
+              </Link>
+            )}
           </div>
         ) : (
           <ul className="space-y-3">

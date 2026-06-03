@@ -191,13 +191,36 @@ export default async function EventPage({
                         <li key={i}>• {nm}</li>
                       ))}
                     </ul>
-                    <div className="text-xs text-[#4a4a55]">
-                      <div>Skills: {(r.skills_covered ?? []).join(", ") || "—"}</div>
-                      <div>Shared time slots: {r.shared_availability ?? 0}</div>
-                      <div>
-                        Shared interests:{" "}
-                        {(r.shared_topics ?? []).join(", ") || "—"}
+                    {/* Why this team (rationale as colored chips) */}
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-[#4a4a55]">Skills</span>
+                        {(r.skills_covered ?? []).length > 0 ? (
+                          (r.skills_covered ?? []).map((s) => (
+                            <span key={s} className="rounded-full bg-[#efeaf7] px-2 py-0.5 text-[11px] font-medium text-[#4b2e83]">
+                              {s}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-[#4a4a55]">—</span>
+                        )}
                       </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-[#4a4a55]">Shared time slots</span>
+                        <span className="rounded-full bg-[#fff3d6] px-2 py-0.5 text-[11px] font-semibold text-[#7a5b00]">
+                          {r.shared_availability ?? 0}
+                        </span>
+                      </div>
+                      {(r.shared_topics ?? []).length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className="text-[10px] font-medium uppercase tracking-wider text-[#4a4a55]">Shared interests</span>
+                          {(r.shared_topics ?? []).map((t) => (
+                            <span key={t} className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[11px] font-medium text-[#1f7a3a]">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

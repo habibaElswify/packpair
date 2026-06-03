@@ -60,6 +60,20 @@ python3 -m venv .venv
 .venv/bin/python -m solver.cli --with-reputation
 ```
 
+### Matcher hyperparameters
+
+Tuning is documented and central, not hidden — each weight is justified:
+
+| Term | Weight | Where | Why |
+| --- | --- | --- | --- |
+| Skill diversity (`|union of skills|`) | **× 10** | `solver/cpsat_matcher.py:51` | Largest weight: balanced teams need complementary skills, the headline objective. |
+| Shared availability slots | **× 5** | `solver/cpsat_matcher.py:52` | A team that can never meet is worse than one with skill overlap; second-highest. |
+| Shared topic interests | **× 3** | `solver/cpsat_matcher.py:53` | Mild bonus: alignment helps motivation but isn't a hard constraint. |
+| Communication style cohesion | **+ 5** if ≤ 2 distinct styles | `solver/cpsat_matcher.py:54` | Step function: mixing 3 styles (sync + async + mixed) tends to fail. |
+| Reputation team bonus | **× 20** (mean composite ∈ [0,1]) | `solver/reputation.py:91` | Bounded so reputation can shift CP-SAT's choice without dominating skill diversity. |
+| k-anonymity threshold | **k = 5** | `solver/privacy.py:20` | Below this, an aggregate from a 3-person team would re-identify a single rater. |
+| Bayesian prior | **Beta(1, 1)** | `solver/reputation.py:25` | Neutral uniform prior; cold-start fix from the proposal feedback. |
+
 ### Benchmarks (M1 Max)
 
 | Pool size | Time-to-optimal | Notes |
