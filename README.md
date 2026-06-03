@@ -1,5 +1,7 @@
 # PackPair
 
+[![CI](https://github.com/habibaElswify/packpair/actions/workflows/ci.yml/badge.svg)](https://github.com/habibaElswify/packpair/actions/workflows/ci.yml)
+
 **AI-powered team formation for UW class projects.**
 CSS 382 — Introduction to Artificial Intelligence · DYOP Final Project · Spring 2026
 Team: Habiba Elswify · Aasiya Sathar — see [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for the per-person split per week.

@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/backend-full]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python:
+    name: Python · pytest (solver + API)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Run test suite
+        run: pytest tests/ -q
+
+  web:
+    name: Next.js · build (web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Production build
+        # Skip type check enforcement on a build that lacks real env vars;
+        # the build itself catches all real type/compile errors.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_dummy
+          NEXT_PUBLIC_SOLVER_API_URL: https://example.invalid
+          SUPABASE_SECRET_KEY: sb_secret_dummy
+        run: npm run build
