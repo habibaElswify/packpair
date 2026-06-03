@@ -670,7 +670,11 @@ export async function formTeams(eventId: string) {
     // "exclude"/"nudge" → leave out of this match
   }
 
-  if (students.length < 2) throw new Error("Need at least 2 students with profiles");
+  if (students.length < 2) {
+    throw new Error(
+      "Need at least 2 students on the roster (with profiles, or under the neutral-default straggler policy) to form teams.",
+    );
+  }
 
   const res = await fetch(`${SOLVER}/match`, {
     method: "POST",

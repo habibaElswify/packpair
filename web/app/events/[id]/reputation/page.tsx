@@ -47,21 +47,30 @@ export default async function ReputationPage({
     .eq("event_id", id);
 
   let subjects: Record<string, SubjectRep> = {};
+  let solverUnavailable = false;
   if (ratings && ratings.length) {
-    const res = await fetch(`${SOLVER}/reputation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-      body: JSON.stringify({
-        k: 5,
-        ratings: ratings.map((r) => ({
-          subject: r.subject_member_id,
-          dimension: r.dimension,
-          stars: r.stars,
-        })),
-      }),
-    });
-    if (res.ok) subjects = (await res.json()).subjects ?? {};
+    // Free-tier solver can be cold (~30s). Time out fast and surface a clear
+    // state instead of hanging the page.
+    try {
+      const res = await fetch(`${SOLVER}/reputation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(4000),
+        body: JSON.stringify({
+          k: 5,
+          ratings: ratings.map((r) => ({
+            subject: r.subject_member_id,
+            dimension: r.dimension,
+            stars: r.stars,
+          })),
+        }),
+      });
+      if (res.ok) subjects = (await res.json()).subjects ?? {};
+      else solverUnavailable = true;
+    } catch {
+      solverUnavailable = true;
+    }
   }
 
   const ranked = Object.entries(subjects).sort(
@@ -85,10 +94,17 @@ export default async function ReputationPage({
         </p>
 
         {ranked.length === 0 ? (
-          <p className="text-sm text-[#4a4a55]">
-            No ratings yet. Once peer review runs (or the instructor simulates a
-            demo round), reputation appears here.
-          </p>
+          solverUnavailable ? (
+            <div className="rounded-lg border border-[#fde7d6] bg-[#fff8ef] p-4 text-sm text-[#7a5b00]">
+              The AI service is waking up from idle (free-tier cold start, ~30s).
+              Refresh in a moment — reputation will appear.
+            </div>
+          ) : (
+            <p className="text-sm text-[#4a4a55]">
+              No ratings yet. Once peer review runs (or the instructor simulates a
+              demo round), reputation appears here.
+            </p>
+          )
         ) : (
           <div className="space-y-3">
             {ranked.map(([memberId, rep]) => (
