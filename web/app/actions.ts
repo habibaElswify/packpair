@@ -389,12 +389,65 @@ export async function saveRatings(eventId: string, formData: FormData) {
         onConflict: "event_id,rater_member_id,subject_member_id,dimension",
       });
   }
+  await rebuildReputationForEvent(admin, eventId);
   redirect(`/events/${eventId}/reputation`);
 }
 
 // Realistic single-project peer ratings: only a student's ACTUAL teammates rate
 // them, so teams of 3 produce exactly 2 ratings per dimension. Reputation then
 // honestly shows "new" until ratings accumulate across multiple projects (k=5).
+// Persist Bayesian Beta(α,β) posteriors per (user_id, dimension) to the
+// reputation table — deterministic recompute from every rating the user has
+// received across ALL their events, so reputation accumulates over a quarter.
+// Synthetic seed students (no user_id) are skipped naturally.
+async function rebuildReputationForEvent(
+  admin: ReturnType<typeof createAdminClient>,
+  eventId: string,
+) {
+  const { data: members } = await admin
+    .from("event_members")
+    .select("id, user_id")
+    .eq("event_id", eventId);
+  const affected = new Set<string>();
+  for (const m of members ?? []) if (m.user_id) affected.add(m.user_id);
+  if (affected.size === 0) return;
+
+  for (const uid of affected) {
+    const { data: theirSeats } = await admin
+      .from("event_members")
+      .select("id")
+      .eq("user_id", uid);
+    const seatIds = (theirSeats ?? []).map((m) => m.id);
+    if (seatIds.length === 0) continue;
+    const { data: allRatings } = await admin
+      .from("ratings")
+      .select("dimension, stars")
+      .in("subject_member_id", seatIds);
+
+    const stats = new Map<string, { alpha: number; beta: number }>();
+    for (const r of allRatings ?? []) {
+      const s = (r.stars - 1) / 4;
+      const cur = stats.get(r.dimension) ?? { alpha: 1.0, beta: 1.0 };
+      cur.alpha += s;
+      cur.beta += 1 - s;
+      stats.set(r.dimension, cur);
+    }
+
+    const rows = Array.from(stats.entries()).map(([dim, st]) => ({
+      user_id: uid,
+      dimension: dim,
+      alpha: st.alpha,
+      beta: st.beta,
+      updated_at: new Date().toISOString(),
+    }));
+    if (rows.length) {
+      await admin
+        .from("reputation")
+        .upsert(rows, { onConflict: "user_id,dimension" });
+    }
+  }
+}
+
 async function regenerateTeammateRatings(
   admin: ReturnType<typeof createAdminClient>,
   eventId: string,
@@ -445,6 +498,7 @@ async function regenerateTeammateRatings(
     await admin.from("ratings").upsert(rows, {
       onConflict: "event_id,rater_member_id,subject_member_id,dimension",
     });
+  await rebuildReputationForEvent(admin, eventId);
 }
 
 export async function simulateRatings(eventId: string) {
