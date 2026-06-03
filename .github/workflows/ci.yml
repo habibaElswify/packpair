@@ -21,7 +21,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Run test suite
-        run: pytest tests/ -q
+        # `python -m` adds the repo root to sys.path so `from solver.X` /
+        # `from api.X` resolve when running from project root.
+        run: python -m pytest tests/ -q
 
   web:
     name: Next.js · build (web)
