@@ -98,9 +98,9 @@
 <header>
   <div class="brand"><div class="logo">PP</div> PackPair</div>
   <nav>
-    <a href="#problem">Problem</a>
+    <a href="https://packpair.vercel.app/demo">Live demo</a>
+    <a href="https://packpair.vercel.app">Open app</a>
     <a href="#how">How it works</a>
-    <a href="#demo">Demo</a>
     <a href="#team">Team</a>
     <a href="https://github.com/habibaElswify/packpair">Repo</a>
   </nav>
@@ -113,7 +113,8 @@
     using constraint-satisfaction search, Bayesian peer-reputation, and team-success prediction —
     and gets smarter every quarter.</p>
   <div class="cta">
-    <a class="btn" href="#demo">See the demo</a>
+    <a class="btn" href="https://packpair.vercel.app/demo">Try the live demo →</a>
+    <a class="btn ghost" href="https://packpair.vercel.app">Sign in (UW) →</a>
     <a class="btn ghost" href="https://github.com/habibaElswify/packpair">GitHub</a>
   </div>
 </section>
@@ -177,24 +178,39 @@
   </table>
 </section>
 
-<section id="demo">
-  <h2>Demo</h2>
-  <p>A student's view of their matches page after submitting a profile — four AI-formed teams,
-    each with the rationale the matcher used.</p>
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>Three real tiers, each owning one job. The AI brain is a separate Python service; the
+    front-end + database stack do auth, CRUD, and Realtime.</p>
   <div class="demo-shot">
-    <img src="mockup.png" alt="Matches page screenshot — four teams with rationale" />
+    <img src="architecture.png" alt="PackPair architecture: Next.js (Vercel) ↔ Supabase ↔ FastAPI solver (Render)" />
   </div>
-  <p style="margin-top:18px;">Reproduce the underlying solver locally:</p>
+  <p style="margin-top:14px;">
+    <strong>Web</strong>: Next.js 16 (App Router, TypeScript) on Vercel · server actions, Realtime client.
+    <strong>Database + auth</strong>: Supabase Postgres with Row-Level Security · Google OAuth (uw.edu) · Realtime.
+    <strong>AI brain</strong>: FastAPI service on Render running the OR-Tools CP-SAT matcher,
+    Bayesian Beta-prior reputation, and k-anonymity guard.
+  </p>
+</section>
+
+<section id="demo">
+  <h2>Demo &amp; live URLs</h2>
+  <p>The deployed app is real, end-to-end:</p>
+  <ul style="margin: 0 0 16px 0; padding-left: 22px; font-size: 15px;">
+    <li><a href="https://packpair.vercel.app/demo">packpair.vercel.app/demo</a> — public interactive sandbox, no login. Click "New class → form teams" and the real CP-SAT solver runs live.</li>
+    <li><a href="https://packpair.vercel.app">packpair.vercel.app</a> — the real app, real UW Google sign-in.</li>
+  </ul>
+  <p>Or reproduce the solver locally:</p>
 <pre>git clone https://github.com/habibaElswify/packpair
 cd packpair
-python3 -m venv .venv && .venv/bin/pip install ortools scipy
+python3 -m venv .venv &amp;&amp; .venv/bin/pip install ortools scipy
 .venv/bin/python -m solver.demo_pipeline   # all three AI layers, end-to-end
 .venv/bin/python -m solver.cli --n 30       # scaling test (30 students)</pre>
 </section>
 
 <section id="stack">
   <h2>Tech stack</h2>
-  <span class="pill">Next.js 14</span>
+  <span class="pill">Next.js 16</span>
   <span class="pill">React 19</span>
   <span class="pill">TypeScript</span>
   <span class="pill">Supabase (Postgres)</span>

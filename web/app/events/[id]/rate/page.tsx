@@ -53,9 +53,14 @@ export default async function RatePage({
 
       <section className="mx-auto max-w-2xl px-6 py-10">
         <h1 className="text-2xl font-bold text-[#32235f]">Rate your teammates</h1>
-        <p className="mb-6 text-sm text-[#4a4a55]">
-          Anonymous · 1–5 on each dimension. Feeds the reputation model for
-          future matches.
+        <p className="mb-2 text-sm text-[#4a4a55]">
+          Anonymous · 1–5 on each dimension.
+        </p>
+        <p className="mb-6 rounded-lg border border-[#e6e1ef] bg-[#efeaf7] px-3 py-2 text-xs text-[#4b2e83]">
+          Your ratings update each teammate&apos;s <strong>Bayesian reputation
+          posterior</strong> — this affects future PackPair team matching, not
+          retroactive grades for this project. A privacy guard (k-anonymity, k=5)
+          suppresses any average backed by too few ratings.
         </p>
 
         {!myTeamId || teammates.length === 0 ? (
