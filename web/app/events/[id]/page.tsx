@@ -118,19 +118,14 @@ export default async function EventPage({
               >
                 Edit your profile
               </Link>
-              {event.state === "peer_review" &&
-                myMember &&
-                memberIdsByTeam.size > 0 &&
-                [...memberIdsByTeam.values()].some((ids) =>
-                  ids.includes(myMember.id),
-                ) && (
-                  <Link
-                    href={`/events/${id}/rate`}
-                    className="rounded-lg border border-[#d8cfe9] px-4 py-2 text-sm font-medium text-[#4b2e83] transition hover:bg-[#efeaf7]"
-                  >
-                    Rate teammates
-                  </Link>
-                )}
+              {event.state === "peer_review" && (
+                <Link
+                  href={`/events/${id}/rate`}
+                  className="rounded-lg border border-[#d8cfe9] px-4 py-2 text-sm font-medium text-[#4b2e83] transition hover:bg-[#efeaf7]"
+                >
+                  Rate teammates
+                </Link>
+              )}
               {(teams?.length ?? 0) > 0 && (
                 <Link
                   href={`/events/${id}/reputation`}
