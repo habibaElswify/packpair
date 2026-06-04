@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "./sign-out-button";
 import type { EventState } from "@/lib/types";
-import Logo from "../components/Logo";
+import Logo from "@/components/logo";
 
 const STATE_LABEL: Record<EventState, string> = {
   draft: "Draft",
