@@ -593,6 +593,9 @@ export async function addRosterMember(eventId: string, formData: FormData) {
     }
     throw new Error(error.message);
   }
+  // Roster changed → any in-progress peer review is stale. Roll state back
+  // so students don't see a Rate-teammates button from a previous round.
+  await resetPeerReviewIfOpen(admin, eventId);
   revalidatePath(`/events/${eventId}`);
 }
 
@@ -610,7 +613,23 @@ export async function removeRosterMember(eventId: string, memberId: string) {
     .eq("id", memberId)
     .eq("event_id", eventId)
     .neq("role", "teacher");
+  // Roster changed → any in-progress peer review is stale.
+  await resetPeerReviewIfOpen(admin, eventId);
   revalidatePath(`/events/${eventId}`);
+}
+
+// Helper: if the event is currently in peer_review, knock it back to
+// "matched" so the Rate-teammates button stops showing until the instructor
+// explicitly re-opens peer review. Idempotent — no-op if not in peer_review.
+async function resetPeerReviewIfOpen(
+  admin: ReturnType<typeof createAdminClient>,
+  eventId: string,
+) {
+  await admin
+    .from("events")
+    .update({ state: "matched" })
+    .eq("id", eventId)
+    .eq("state", "peer_review");
 }
 
 // Re-balance ONLY the affected teams when students dropped after teams
