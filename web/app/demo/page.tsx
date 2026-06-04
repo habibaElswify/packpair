@@ -129,8 +129,11 @@ export default async function DemoPage() {
           <>
             <h2 className="text-xl font-bold text-[#32235f]">Peer reputation</h2>
             <p className="mb-4 text-sm text-[#4a4a55]">
-              Bayesian posteriors from peer ratings; averages shown only when ≥5
-              ratings back them (k-anonymity) — otherwise marked “new.”
+              Bayesian posteriors from peer ratings, with ratings from this
+              student&apos;s past PackPair projects rolled in (this is what the
+              cross-event recompute does in real classroom use). Averages shown
+              only when ≥5 ratings back them (k-anonymity) — otherwise marked
+              &ldquo;new.&rdquo;
             </p>
             <div className="space-y-2">
               {repRows.map(([id, rep]) => (

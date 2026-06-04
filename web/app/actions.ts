@@ -972,8 +972,88 @@ export async function guestRegenerateAndForm() {
 // Run a realistic teammate-only peer-rating round on the demo class.
 export async function guestSimulateRatings() {
   const { admin, ev } = await getDemoEvent();
-  await regenerateTeammateRatings(admin, ev.id);
+  await seedDemoRatingsCrossEvent(admin, ev.id);
   revalidatePath("/demo");
+}
+
+// Demo-only rating seed that mirrors REAL classroom cross-event accumulation.
+//
+// In a real PackPair deployment, every UW student accumulates ratings across
+// every project they're on over a quarter — the same `user_id` collects Beta
+// posteriors from CSS 382 AND CSS 422 AND CSS 475 AND so on. The reputation
+// recompute (`rebuildReputationForEvent`) honors that by reading EVERY rating
+// the user has received in ANY event.
+//
+// The public `/demo` only has one event, so a single round of teammate-only
+// ratings produces 2 ratings/dim/subject — k=5 is mathematically impossible.
+// To represent the real workflow, we ALSO seed 5 cross-collaborator ratings
+// per (subject, dimension), framed as "ratings from this student's past
+// PackPair projects." After this, each subject has 5–7 ratings/dim — past
+// the k-anon threshold — and the reputation page shows real composites.
+async function seedDemoRatingsCrossEvent(
+  admin: ReturnType<typeof createAdminClient>,
+  eventId: string,
+) {
+  await admin.from("ratings").delete().eq("event_id", eventId);
+
+  // All student members of this event become both subjects (rated) and
+  // raters (representing past collaborators). The rater_member_id FK only
+  // requires membership in the same event, which they all already satisfy.
+  const { data: members } = await admin
+    .from("event_members")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("role", "student");
+  const ids = (members ?? []).map((m) => m.id);
+  if (ids.length < 6) return; // need enough distinct raters to cross k=5
+
+  // Stable per-student "true quality" so each subject's posterior converges
+  // sensibly across the dimensions instead of being pure noise.
+  const quality = new Map<string, number>();
+  for (const id of ids) quality.set(id, 0.4 + Math.random() * 0.55);
+
+  const RATERS_PER_SUBJECT = 5; // enough to land at or above k=5
+  const rows: {
+    event_id: string;
+    rater_member_id: string;
+    subject_member_id: string;
+    dimension: string;
+    stars: number;
+  }[] = [];
+
+  for (const subject of ids) {
+    // Pick a random set of OTHER members as historical raters.
+    const candidates = ids.filter((x) => x !== subject);
+    // Fisher–Yates shuffle, take first RATERS_PER_SUBJECT.
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    const raters = candidates.slice(0, RATERS_PER_SUBJECT);
+
+    for (const rater of raters) {
+      for (const dim of DIMENSIONS) {
+        const noisy = Math.max(
+          0,
+          Math.min(1, quality.get(subject)! + (Math.random() - 0.5) * 0.3),
+        );
+        rows.push({
+          event_id: eventId,
+          rater_member_id: rater,
+          subject_member_id: subject,
+          dimension: dim,
+          stars: Math.round(1 + 4 * noisy),
+        });
+      }
+    }
+  }
+
+  if (rows.length) {
+    await admin.from("ratings").upsert(rows, {
+      onConflict: "event_id,rater_member_id,subject_member_id,dimension",
+    });
+  }
+  await rebuildReputationForEvent(admin, eventId);
 }
 
 export async function formTeams(eventId: string) {
