@@ -24,6 +24,10 @@ async function canvasGet(baseUrl: string, token: string, path: string) {
 
 // Courses where the signed-in user is a Teacher or TA. Doubles as the teacher
 // verification: an empty list means they can't create real events for a course.
+// Note: Canvas's /courses?enrollment_type=X param takes a SINGLE role, so a TA
+// would be excluded by enrollment_type=teacher. We instead derive the list of
+// taught courses from the enrollments call (which already filters Teacher+TA)
+// and look up each course's name individually.
 export async function getTaughtCourses(
   baseUrl: string,
   token: string,
@@ -31,18 +35,28 @@ export async function getTaughtCourses(
   const enrollments: CanvasEnrollment[] = await canvasGet(
     baseUrl,
     token,
-    "/users/self/enrollments?type[]=TeacherEnrollment&type[]=TaEnrollment&per_page=100",
+    "/users/self/enrollments?type[]=TeacherEnrollment&type[]=TaEnrollment&state[]=active&per_page=100",
   );
-  const teaches = new Set(enrollments.map((e) => e.course_id));
-  if (teaches.size === 0) return [];
-  const courses: { id: number; name: string }[] = await canvasGet(
-    baseUrl,
-    token,
-    "/courses?enrollment_type=teacher&per_page=100",
+  const taughtIds = Array.from(
+    new Set(enrollments.map((e) => e.course_id).filter(Boolean)),
   );
-  return courses
-    .filter((c) => teaches.has(c.id) && c.name)
-    .map((c) => ({ id: c.id, name: c.name }));
+  if (taughtIds.length === 0) return [];
+
+  const results: TaughtCourse[] = [];
+  for (const id of taughtIds) {
+    try {
+      const course = (await canvasGet(baseUrl, token, `/courses/${id}`)) as {
+        id?: number;
+        name?: string;
+      };
+      if (course?.id && course.name) {
+        results.push({ id: course.id, name: course.name });
+      }
+    } catch {
+      // skip courses we can't fetch individually (e.g. unpublished/restricted)
+    }
+  }
+  return results;
 }
 
 export type RosterEntry = { name: string; email: string };
