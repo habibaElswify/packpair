@@ -3,6 +3,8 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TeacherControls } from "./teacher-controls";
 import { RealtimeRefresh } from "./realtime-refresh";
+import { RemoveRosterButton } from "./roster-row-actions";
+import { addRosterMember } from "@/app/actions";
 
 type Rationale = {
   skills_covered?: string[];
@@ -121,35 +123,89 @@ export default async function EventPage({
           </div>
         )}
 
-        {isOwner && students.length > 0 && (
+        {isOwner && (
           <div className="rounded-xl border border-[#e6e1ef] bg-white p-5">
             <h2 className="mb-3 font-semibold text-[#32235f]">
               Roster — {students.length} students
-              <span className="ml-2 text-sm font-normal text-[#4a4a55]">
-                ({joinedCount} joined · {students.length - joinedCount} invited)
-              </span>
+              {students.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-[#4a4a55]">
+                  ({joinedCount} joined · {students.length - joinedCount} invited)
+                </span>
+              )}
             </h2>
-            <div className="max-h-72 overflow-auto rounded-lg border border-[#f0ecf7]">
-              <ul className="divide-y divide-[#f0ecf7] text-sm">
-                {students.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between px-3 py-2">
-                    <span className="text-[#1b1b1f]">
-                      {m.roster_name}{" "}
-                      <span className="text-[#4a4a55]">· {m.roster_email}</span>
-                    </span>
-                    {m.user_id ? (
-                      <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-xs font-medium text-[#1f7a3a]">
-                        joined
+
+            {/* Manually add one student (late add, classmate not in gradebook) */}
+            <form
+              action={addRosterMember.bind(null, id)}
+              className="mb-3 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-[#d8cfe9] bg-[#f7f5fb] p-3"
+            >
+              <label className="flex-1 min-w-[160px]">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-[#4a4a55]">
+                  Name (optional)
+                </span>
+                <input
+                  name="name"
+                  placeholder="Maya Patel"
+                  className="w-full rounded-md border border-[#d8cfe9] bg-white px-2 py-1.5 text-sm"
+                />
+              </label>
+              <label className="flex-1 min-w-[200px]">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-[#4a4a55]">
+                  UW email or NetID
+                </span>
+                <input
+                  name="email"
+                  required
+                  placeholder="mpatel@uw.edu or mpatel"
+                  className="w-full rounded-md border border-[#d8cfe9] bg-white px-2 py-1.5 text-sm font-mono"
+                />
+              </label>
+              <button
+                type="submit"
+                className="rounded-md bg-[#4b2e83] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-[#32235f]"
+              >
+                + Add student
+              </button>
+            </form>
+
+            {students.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-[#d8cfe9] bg-[#f7f5fb] p-4 text-center text-sm text-[#4a4a55]">
+                Roster is empty. Add students individually above, or use{" "}
+                <Link href={`/events/${id}/canvas`} className="font-medium text-[#4b2e83] underline">
+                  Import from Canvas
+                </Link>{" "}
+                to paste the gradebook CSV.
+              </p>
+            ) : (
+              <div className="max-h-72 overflow-auto rounded-lg border border-[#f0ecf7]">
+                <ul className="divide-y divide-[#f0ecf7] text-sm">
+                  {students.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                      <span className="text-[#1b1b1f]">
+                        {m.roster_name}{" "}
+                        <span className="text-[#4a4a55]">· {m.roster_email}</span>
                       </span>
-                    ) : (
-                      <span className="rounded-full bg-[#efeaf7] px-2 py-0.5 text-xs text-[#4b2e83]">
-                        invited
+                      <span className="flex items-center">
+                        {m.user_id ? (
+                          <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-xs font-medium text-[#1f7a3a]">
+                            joined
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-[#efeaf7] px-2 py-0.5 text-xs text-[#4b2e83]">
+                            invited
+                          </span>
+                        )}
+                        <RemoveRosterButton
+                          eventId={id}
+                          memberId={m.id}
+                          rosterName={m.roster_name}
+                        />
                       </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 

@@ -531,6 +531,56 @@ export async function verifyInstructor(
 
 // Canvas: verify the user is a teacher (returns their taught courses) and save
 // their token. An empty list means Canvas doesn't see them as a teacher.
+// Manually add a single student to the roster (e.g. a late add or a classmate
+// who isn't in the gradebook yet). Same gate semantics as a CSV import.
+export async function addRosterMember(eventId: string, formData: FormData) {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+
+  const name = String(formData.get("name") ?? "").trim();
+  const emailRaw = String(formData.get("email") ?? "").trim();
+  if (!emailRaw) throw new Error("Email or NetID is required");
+
+  // Accept full email or just a NetID (we append @uw.edu).
+  const email = emailRaw.includes("@")
+    ? emailRaw.toLowerCase()
+    : `${emailRaw.toLowerCase()}@uw.edu`;
+  const displayName = name || email.split("@")[0];
+
+  const { error } = await admin.from("event_members").insert({
+    event_id: eventId,
+    roster_name: displayName,
+    roster_email: email,
+    role: "student",
+    source: "csv",
+  });
+  if (error) {
+    if (/duplicate key|unique/i.test(error.message)) {
+      throw new Error(`${email} is already on this roster.`);
+    }
+    throw new Error(error.message);
+  }
+  revalidatePath(`/events/${eventId}`);
+}
+
+// Remove a student from the roster. Cascades to their profile, team
+// membership, and ratings (the FKs use ON DELETE CASCADE).
+export async function removeRosterMember(eventId: string, memberId: string) {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+  // Defense-in-depth: only delete members of this event, and never the
+  // teacher's own roster row.
+  await admin
+    .from("event_members")
+    .delete()
+    .eq("id", memberId)
+    .eq("event_id", eventId)
+    .neq("role", "teacher");
+  revalidatePath(`/events/${eventId}`);
+}
+
 export async function listTaughtCourses(
   baseUrl: string,
   token: string,
