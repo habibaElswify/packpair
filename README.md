@@ -8,6 +8,21 @@ Team: Habiba Elswify · Aasiya Sathar — see [CONTRIBUTIONS.md](CONTRIBUTIONS.m
 
 Landing page: <https://habibaelswify.github.io/packpair/>
 
+## 🚀 For graders — start here
+
+| | URL | What to do |
+|---|---|---|
+| **Live app** | <https://packpair.vercel.app> | Sign in with any `@uw.edu` Google account (click through Google's "unverified app" notice — we only ask for `email` + `profile`). |
+| **Public demo (no login)** | <https://packpair.vercel.app/demo> | Click **"New class → form teams"** to run the real CP-SAT solver live; **"Run a peer-rating round"** to drive the Bayesian + k-anonymity layers. |
+| **Project landing page** | <https://habibaelswify.github.io/packpair/> | Tech overview + architecture diagram + AI-layers explanation. |
+| **AI brain** | <https://packpair-solver.onrender.com/health> | FastAPI solver service (returns `{"status":"ok"}`; free-tier ~30s cold start on first hit). |
+
+**To verify the instructor gate works:** sign in as a student → no "+ Create event" button appears. Then visit `/instructor`, paste a UW Canvas API token where you teach or TA — `is_instructor` is flipped to true and "+ Create event" appears. (Habiba was seeded as the project owner; verification works for any TA/Teacher via Canvas.)
+
+**Per-person contributions:** [`CONTRIBUTIONS.md`](CONTRIBUTIONS.md). The commit history shows only Habiba's GitHub account because we pair-programmed and pushed from one laptop — Aasiya's design, schema, privacy code, and writeup are documented in the weekly status decks (`Week 1/2/3 .pptx`).
+
+**Peer Review survey:** filed via Canvas separately (per the rubric).
+
 ## What it does
 
 UW students fill out a profile (skills, schedule, communication style, topic interests). PackPair
