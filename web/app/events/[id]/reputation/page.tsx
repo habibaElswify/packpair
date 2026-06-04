@@ -101,8 +101,8 @@ export default async function ReputationPage({
             </div>
           ) : (
             <p className="text-sm text-[#4a4a55]">
-              No ratings yet. Once peer review runs (or the instructor simulates a
-              demo round), reputation appears here.
+              No ratings yet. Once peer review opens and teammates rate each
+              other, reputation appears here.
             </p>
           )
         ) : (

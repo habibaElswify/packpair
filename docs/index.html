@@ -338,6 +338,37 @@
   </div>
 </section>
 
+<!-- Solver benchmarks — does it scale? -->
+<section style="max-width:960px;margin:18px auto 0;padding:0 24px;">
+  <div style="background:white;border:1px solid #e6e1ef;border-radius:14px;padding:18px 22px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
+      <h3 style="margin:0;font-size:16px;color:#32235f;">Solver scale — every student placed</h3>
+      <a href="benchmarks.json" style="font-size:12px;color:#4b2e83;font-weight:600;">benchmarks.json →</a>
+    </div>
+    <p style="margin:0 0 10px;font-size:13px;color:#4a4a55;">
+      Five class sizes, CP-SAT exact below ~40 students, greedy heuristic above. Every student placed in every run.
+    </p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="color:#4a4a55;text-align:left;border-bottom:1px solid #e6e1ef;">
+          <th style="padding:6px 4px;font-weight:600;">Class size</th>
+          <th style="padding:6px 4px;font-weight:600;">Teams</th>
+          <th style="padding:6px 4px;font-weight:600;">Algorithm</th>
+          <th style="padding:6px 4px;font-weight:600;">Solve time</th>
+          <th style="padding:6px 4px;font-weight:600;">Coverage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:6px 4px;">9</td><td style="padding:6px 4px;">3</td><td style="padding:6px 4px;">CP-SAT</td><td style="padding:6px 4px;">23 ms</td><td style="padding:6px 4px;color:#1f7a3a;font-weight:600;">100%</td></tr>
+        <tr><td style="padding:6px 4px;">18</td><td style="padding:6px 4px;">6</td><td style="padding:6px 4px;">CP-SAT</td><td style="padding:6px 4px;">2.0 s</td><td style="padding:6px 4px;color:#1f7a3a;font-weight:600;">100%</td></tr>
+        <tr><td style="padding:6px 4px;">30</td><td style="padding:6px 4px;">10</td><td style="padding:6px 4px;">CP-SAT</td><td style="padding:6px 4px;">&lt; 1 ms</td><td style="padding:6px 4px;color:#1f7a3a;font-weight:600;">100%</td></tr>
+        <tr><td style="padding:6px 4px;">60</td><td style="padding:6px 4px;">20</td><td style="padding:6px 4px;">Greedy</td><td style="padding:6px 4px;">1 ms</td><td style="padding:6px 4px;color:#1f7a3a;font-weight:600;">100%</td></tr>
+        <tr><td style="padding:6px 4px;">120</td><td style="padding:6px 4px;">40</td><td style="padding:6px 4px;">Greedy</td><td style="padding:6px 4px;">6 ms</td><td style="padding:6px 4px;color:#1f7a3a;font-weight:600;">100%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <main>
 
 <div class="lede">

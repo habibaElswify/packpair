@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TeacherControls } from "./teacher-controls";
 import { RealtimeRefresh } from "./realtime-refresh";
 import { RemoveRosterButton } from "./roster-row-actions";
-import { addRosterMember } from "@/app/actions";
+import { addRosterMember, rosterPreflight } from "@/app/actions";
 
 type Rationale = {
   skills_covered?: string[];
@@ -100,6 +100,10 @@ export default async function EventPage({
             hasTeams={(teams?.length ?? 0) > 0}
             isAppAdmin={isAppAdmin}
           />
+        )}
+
+        {isOwner && students.length > 0 && (teams?.length ?? 0) === 0 && (
+          <PreflightPanel eventId={id} />
         )}
 
         {!isOwner && myMember && (
@@ -298,11 +302,60 @@ export default async function EventPage({
           <p className="text-sm text-[#4a4a55]">
             No teams yet.{" "}
             {isOwner
-              ? "Seed some demo students, then click Form teams."
+              ? "Import a roster (or add students above), then click Form teams."
               : "Teams haven't been formed yet."}
           </p>
         )}
       </section>
     </main>
+  );
+}
+
+// Server-rendered roster pre-flight: lists problems the solver can't fix on
+// its own so the teacher can address them BEFORE pressing Form teams.
+async function PreflightPanel({ eventId }: { eventId: string }) {
+  const anomalies = await rosterPreflight(eventId);
+  const kindLabel: Record<string, string> = {
+    no_profile: "No profile yet",
+    no_availability: "No availability picked",
+    no_skills: "No skills picked",
+    comm_style_isolated: "Comm-style outlier",
+  };
+  return (
+    <div className="rounded-xl border border-[#e6e1ef] bg-white p-5">
+      <h2 className="mb-1 font-semibold text-[#32235f]">
+        Roster pre-flight check
+      </h2>
+      <p className="mb-3 text-xs text-[#4a4a55]">
+        Problems the AI can&apos;t fix on its own. Resolve before forming
+        teams for the best matches.
+      </p>
+      {anomalies.length === 0 ? (
+        <div className="rounded-lg border border-[#cdeed7] bg-[#e6f4ea] px-3 py-2 text-sm text-[#1f7a3a]">
+          ✓ All clear — every student has a profile with skills, availability,
+          and a comm-style shared with at least one other student.
+        </div>
+      ) : (
+        <ul className="space-y-1.5 text-sm">
+          {anomalies.map((a, i) => (
+            <li
+              key={i}
+              className="flex items-start gap-2 rounded-lg border border-[#fde7d6] bg-[#fff8ef] px-3 py-2"
+            >
+              <span className="rounded-full bg-[#fff3d6] px-2 py-0.5 text-[11px] font-semibold text-[#7a5b00]">
+                {kindLabel[a.kind] ?? a.kind}
+              </span>
+              <span className="flex-1 text-[#1b1b1f]">
+                <strong>{a.name}</strong>{" "}
+                <span className="text-[#4a4a55]">· {a.email}</span>
+                {a.detail && (
+                  <span className="block text-xs text-[#4a4a55]">{a.detail}</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

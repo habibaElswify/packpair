@@ -599,6 +599,83 @@ export async function removeRosterMember(eventId: string, memberId: string) {
   revalidatePath(`/events/${eventId}`);
 }
 
+// Pre-flight roster anomaly check for instructors. Surfaces problems the
+// solver can't fix on its own (missing profiles, zero-availability students,
+// isolated comm-style outliers) BEFORE the teacher hits "Form teams" — so
+// they can chase up stragglers instead of debugging a bad team formation.
+export type RosterAnomaly = {
+  kind:
+    | "no_profile"
+    | "no_availability"
+    | "no_skills"
+    | "comm_style_isolated";
+  name: string;
+  email: string;
+  detail?: string;
+};
+
+export async function rosterPreflight(eventId: string): Promise<RosterAnomaly[]> {
+  const user = await requireUser();
+  await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+
+  const { data: members } = await admin
+    .from("event_members")
+    .select("id, roster_name, roster_email, role")
+    .eq("event_id", eventId)
+    .eq("role", "student");
+  const { data: profiles } = await admin
+    .from("student_profiles")
+    .select("member_id, skills, availability, comm_style")
+    .eq("event_id", eventId);
+  const byMember = new Map((profiles ?? []).map((p) => [p.member_id, p]));
+
+  const anomalies: RosterAnomaly[] = [];
+  const commCounts = new Map<string, number>();
+  for (const p of profiles ?? []) {
+    commCounts.set(p.comm_style ?? "mixed", (commCounts.get(p.comm_style ?? "mixed") ?? 0) + 1);
+  }
+
+  for (const m of members ?? []) {
+    const p = byMember.get(m.id);
+    if (!p) {
+      anomalies.push({
+        kind: "no_profile",
+        name: m.roster_name,
+        email: m.roster_email,
+        detail: "Hasn't joined and filled their profile yet",
+      });
+      continue;
+    }
+    if (!p.availability || p.availability.length === 0) {
+      anomalies.push({
+        kind: "no_availability",
+        name: m.roster_name,
+        email: m.roster_email,
+        detail: "Picked zero time slots — can't share availability with anyone",
+      });
+    }
+    if (!p.skills || p.skills.length === 0) {
+      anomalies.push({
+        kind: "no_skills",
+        name: m.roster_name,
+        email: m.roster_email,
+        detail: "Picked zero skills — solver has no signal on what they bring",
+      });
+    }
+    const cs = p.comm_style ?? "mixed";
+    if ((commCounts.get(cs) ?? 0) === 1) {
+      anomalies.push({
+        kind: "comm_style_isolated",
+        name: m.roster_name,
+        email: m.roster_email,
+        detail: `Only student picking "${cs}" — will be a comm-style outlier on every team`,
+      });
+    }
+  }
+  return anomalies;
+}
+
 export async function listTaughtCourses(
   baseUrl: string,
   token: string,

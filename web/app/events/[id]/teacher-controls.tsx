@@ -114,6 +114,16 @@ export function TeacherControls({
             View reputation →
           </Link>
         )}
+        {hasTeams && (
+          <a
+            href={`/events/${eventId}/teams.csv`}
+            className={btn}
+            download
+            title="Download teams + rationale as CSV"
+          >
+            ⬇ Export teams (CSV)
+          </a>
+        )}
         <button
           onClick={onDelete}
           disabled={deleting || pending}

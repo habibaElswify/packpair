@@ -88,16 +88,37 @@ class ReputationStore:
     def composite(self, name: str) -> float:
         return self.get(name).composite()
 
-    def team_bonus(self, team_names: Iterable[str], *, weight: int = 20) -> int:
+    def team_bonus(
+        self,
+        team_names: Iterable[str],
+        *,
+        weight: int = 20,
+        smoothing: int = 4,
+    ) -> int:
         """Integer bonus for the team's mean composite — fed to CP-SAT.
 
-        The bonus is bounded in [0, weight], so a team of high-reputation
-        students gains up to `weight` points on top of the base score.
+        Confidence-weighted: each student's composite is shrunk toward the
+        neutral 0.5 prior by `smoothing / (smoothing + n_observations)`, so a
+        student with very few ratings can't swing the objective on noise.
+        `smoothing=4` is one less than the k-anonymity threshold (k=5), so
+        students cross the "ratings displayed publicly" line at roughly the
+        same point they start meaningfully moving the bonus.
+
+        The bonus is bounded in [0, weight].
         """
         names = list(team_names)
         if not names:
             return 0
-        m = sum(self.composite(n) for n in names) / len(names)
+        total = 0.0
+        for n in names:
+            rep = self.get(n)
+            shrunk_dims = []
+            for dim, post in rep.by_dim.items():
+                n_obs = post.n_observations()
+                w = n_obs / (n_obs + smoothing)
+                shrunk_dims.append(w * post.mean + (1 - w) * 0.5)
+            total += sum(shrunk_dims) / len(shrunk_dims)
+        m = total / len(names)
         return int(round(weight * m))
 
     def summary(self, name: str) -> Dict[str, Dict[str, float]]:
