@@ -373,7 +373,17 @@
 
 <div class="lede">
   <h1>Find your project team.</h1>
-  <p>The interactive walkthrough below is a mockup for click-through use. The <a href="https://packpair.vercel.app/demo" style="color:#4b2e83;font-weight:600;">real deployed demo</a> at <code>packpair.vercel.app/demo</code> runs the real AI service.</p>
+  <p style="max-width:680px;margin:8px auto 18px;">
+    The fastest way to evaluate PackPair is the real deployed app, not this static page.
+  </p>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:8px;">
+    <a href="https://packpair.vercel.app/demo" target="_blank" style="background:#4b2e83;color:white;padding:11px 22px;border-radius:999px;font-weight:700;text-decoration:none;">▶ Try the live interactive demo</a>
+    <a href="https://packpair.vercel.app" target="_blank" style="background:white;color:#4b2e83;padding:11px 22px;border-radius:999px;font-weight:700;text-decoration:none;border:1.5px solid #4b2e83;">Sign in with UW Google</a>
+  </div>
+  <p style="font-size:13px;color:var(--ink-soft);margin:6px 0 0;">
+    No login needed for the demo — it runs the real CP-SAT solver on a fresh synthetic class on every click.
+    <br/>The four-step walkthrough below is a static mockup, for click-through screenshots.
+  </p>
 </div>
 
 <!-- STEP 1 -->
@@ -557,11 +567,18 @@ const POOL = [
   {name: "Liam OBrien",  skills: ["ml", "backend"],        avail: [3, 4, 5], comm: "async", topics: ["research", "ai"]},
   {name: "Aria Rossi",   skills: ["design", "python"],     avail: [0, 4, 5], comm: "sync",  topics: ["ux", "ai"]},
 ];
+// Each candidate carries ratings from PRIOR PackPair events this quarter —
+// this is how reputation accumulates across a student's UW career (the same
+// recompute the live app does, see solver/reputation.py and the rebuild path
+// in web/app/actions.ts:rebuildReputationForEvent). Every n is ≥ 4 so that
+// after a single round in THIS demo the totals cross the k=5 threshold and
+// the public composite becomes disclosed — mirroring the real cross-event
+// behaviour rather than the unrealistic "single-event from cold-start" view.
 const REP_HISTORY = {
   "Alex Chen":    {n: 12, mean: 0.78},
   "Maya Patel":   {n: 8,  mean: 0.66},
   "Jordan Kim":   {n: 14, mean: 0.81},
-  "Sara Ahmed":   {n: 3,  mean: 0.55},
+  "Sara Ahmed":   {n: 4,  mean: 0.55},
   "Diego Lopez":  {n: 6,  mean: 0.62},
   "Priya Shah":   {n: 9,  mean: 0.73},
   "Ethan Wright": {n: 4,  mean: 0.51},
@@ -861,6 +878,23 @@ document.getElementById("btn-submit-ratings").addEventListener("click", () => {
   notice.innerHTML = kanonCount > 0
     ? `<b>k-anonymity guard active.</b> ${kanonCount} teammate(s) have fewer than ${K_THRESHOLD} total ratings, so their public composite is suppressed — your rating is recorded but not yet displayed publicly. This is the anti-gaming mitigation from our proposal feedback.`
     : `<b>All teammates' aggregates are publicly disclosed</b> (each has ≥ ${K_THRESHOLD} ratings total). The k-anonymity guard only suppresses when the rating window would let a single rater be re-identified.`;
+
+  // Persist this round into REP_HISTORY so the team chips reflect the new
+  // public composite — the same cross-event recompute the real app does
+  // (web/app/actions.ts:rebuildReputationForEvent). After this the chips in
+  // step 2 transition from "new" to a disclosed star score, demonstrating
+  // that ratings actually move the needle. Re-rendering the team panel
+  // surfaces the change without a page reload.
+  const dimsForUpdate = ["participation", "communication", "technical"];
+  teammates.forEach(tm => {
+    const r = state.ratings[tm.name];
+    const composite = dimsForUpdate.reduce((acc, d) => acc + (r[d] - 1) / 4, 0) / dimsForUpdate.length;
+    const h = REP_HISTORY[tm.name];
+    const newN = h.n + 1;
+    h.mean = (h.mean * h.n + composite) / newN;
+    h.n = newN;
+  });
+  renderTeams();
 
   document.getElementById("step3").classList.add("done");
   document.getElementById("step4").classList.remove("disabled");

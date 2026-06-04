@@ -331,6 +331,20 @@ export async function saveProfile(eventId: string, formData: FormData) {
   const availability = formData.getAll("availability").map((v) => Number(v));
   const commStyle = String(formData.get("comm_style") ?? "mixed");
 
+  // Minimums — the solver can't form sensible teams from empty profiles.
+  // Mirrors the client-side hints on the profile form.
+  if (skills.length < 2) {
+    throw new Error("Pick at least 2 skills so the solver knows what you bring.");
+  }
+  if (availability.length < 2) {
+    throw new Error(
+      "Pick at least 2 time slots so the solver can find teammates you can actually meet.",
+    );
+  }
+  if (topics.length < 1) {
+    throw new Error("Pick at least 1 topic you're interested in.");
+  }
+
   await admin.from("student_profiles").upsert(
     {
       event_id: eventId,
