@@ -43,4 +43,13 @@ PackPair is a two-person DYOP team for **CSS 382 — Introduction to AI (Spring 
 ---
 
 ### Notes for graders
-Commit identity in the repository shows only Habiba's GitHub account because we pair-programmed and pushed from her laptop. Aasiya's design, schema, privacy code, and writeup contributions are recorded in the weekly status decks (`~/Desktop/PackPair-Presentation/PackPair_Week1.pptx`, `Week2.pptx`, `Week3.pptx`) and reflected in the file paths above.
+Commit identity in the repository shows only Habiba's GitHub account
+because we pair-programmed and pushed from her laptop. Aasiya's design,
+schema, privacy code, and writeup contributions are recorded in the
+weekly status decks and reflected in the file paths below.
+
+Presentation slides for each week are stored directly in this repository
+under the `presentations/` folder for easy access:
+- `presentations/DYOP Weekly Status1.pptx` — Week 1 project pitch
+- `presentations/DYOP Weekly Status2.pptx` — Week 2 progress update
+- `presentations/PackPair_Week3.pptx` — Week 3 final presentation
