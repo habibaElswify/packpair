@@ -37,34 +37,79 @@ export default async function ReputationPage({
   const admin = createAdminClient();
   const { data: members } = await admin
     .from("event_members")
-    .select("id, roster_name")
+    .select("id, roster_name, user_id")
     .eq("event_id", id);
   const nameById = new Map((members ?? []).map((m) => [m.id, m.roster_name]));
 
-  const { data: ratings } = await admin
+  // Cross-event accumulation: for every member of THIS event who has a UW
+  // identity, also pull their ratings from every OTHER event they're in.
+  // We pass them all to the solver keyed by this-event member_id so the
+  // page displays correctly, but the rating COUNT (and therefore the
+  // k-anonymity decision) reflects each student's full PackPair history.
+  // This is the same accumulation rebuildReputationForEvent persists into
+  // the `reputation` table; doing it again here keeps the page in sync
+  // with the persistent posterior.
+  const userIdByMember = new Map(
+    (members ?? [])
+      .filter((m) => m.user_id)
+      .map((m) => [m.id, m.user_id as string]),
+  );
+  const userIds = [...new Set(userIdByMember.values())];
+
+  let allSeats: { id: string; user_id: string }[] = [];
+  if (userIds.length > 0) {
+    const { data } = await admin
+      .from("event_members")
+      .select("id, user_id")
+      .in("user_id", userIds);
+    allSeats = (data ?? []) as { id: string; user_id: string }[];
+  }
+  const seatToUser = new Map(allSeats.map((s) => [s.id, s.user_id]));
+  const memberIdByUser = new Map<string, string>();
+  for (const [mid, uid] of userIdByMember.entries()) memberIdByUser.set(uid, mid);
+
+  // ALL ratings ever received by any current-event member, in any event.
+  const seatIds = allSeats.map((s) => s.id);
+  const { data: ratings } = seatIds.length
+    ? await admin
+        .from("ratings")
+        .select("subject_member_id, dimension, stars")
+        .in("subject_member_id", seatIds)
+    : { data: [] as { subject_member_id: string; dimension: string; stars: number }[] };
+
+  // Also include this event's ratings of NON-joined roster members (e.g. seeded
+  // demo students that never had a user_id) so the page still renders them.
+  const { data: localOnly } = await admin
     .from("ratings")
     .select("subject_member_id, dimension, stars")
     .eq("event_id", id);
+  const memberIds = new Set((members ?? []).map((m) => m.id));
+  for (const r of localOnly ?? []) {
+    if (!seatToUser.has(r.subject_member_id) && memberIds.has(r.subject_member_id)) {
+      (ratings ?? []).push(r);
+    }
+  }
 
   let subjects: Record<string, SubjectRep> = {};
   let solverUnavailable = false;
   if (ratings && ratings.length) {
-    // Free-tier solver can be cold (~30s). Time out fast and surface a clear
-    // state instead of hanging the page.
+    // Re-key cross-event ratings to THIS event's member_id so the UI maps
+    // back to a name we can render.
+    const payload = ratings.map((r) => {
+      const uid = seatToUser.get(r.subject_member_id);
+      const subject =
+        uid && memberIdByUser.has(uid)
+          ? memberIdByUser.get(uid)!
+          : r.subject_member_id;
+      return { subject, dimension: r.dimension, stars: r.stars };
+    });
     try {
       const res = await fetch(`${SOLVER}/reputation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         signal: AbortSignal.timeout(4000),
-        body: JSON.stringify({
-          k: 5,
-          ratings: ratings.map((r) => ({
-            subject: r.subject_member_id,
-            dimension: r.dimension,
-            stars: r.stars,
-          })),
-        }),
+        body: JSON.stringify({ k: 5, ratings: payload }),
       });
       if (res.ok) subjects = (await res.json()).subjects ?? {};
       else solverUnavailable = true;
@@ -88,9 +133,11 @@ export default async function ReputationPage({
       <section className="mx-auto max-w-3xl px-6 py-10">
         <h1 className="text-2xl font-bold text-[#32235f]">Peer reputation</h1>
         <p className="mb-6 text-sm text-[#4a4a55]">
-          Bayesian Beta posteriors from peer ratings. Averages are shown only
-          when at least <strong>5 ratings</strong> back them (k-anonymity) — so
-          no single rater can be identified.
+          Bayesian Beta posteriors from peer ratings. Ratings accumulate
+          across every PackPair event a student is in — the counts below
+          include their full history, not just this class. Averages are
+          shown only when at least <strong>5 ratings</strong> back them
+          (k-anonymity) — so no single rater can be identified.
         </p>
 
         {ranked.length === 0 ? (
@@ -107,7 +154,18 @@ export default async function ReputationPage({
           )
         ) : (
           <div className="space-y-3">
-            {ranked.map(([memberId, rep]) => (
+            {ranked.map(([memberId, rep]) => {
+              // The composite is k-anon-gated TOO — if no dimension has
+              // enough ratings to disclose, hiding per-dim while showing a
+              // composite would be inconsistent (and a small privacy leak).
+              const totalN = DIMS.reduce(
+                (s, d) => s + (rep.by_dimension[d]?.n ?? 0),
+                0,
+              );
+              const anyDisclosable = DIMS.some(
+                (d) => rep.by_dimension[d]?.public != null,
+              );
+              return (
               <div
                 key={memberId}
                 className="rounded-xl border border-[#e6e1ef] bg-white p-5"
@@ -116,9 +174,18 @@ export default async function ReputationPage({
                   <span className="font-semibold text-[#1b1b1f]">
                     {nameById.get(memberId) ?? "—"}
                   </span>
-                  <span className="rounded-full bg-[#efeaf7] px-3 py-1 text-xs font-semibold text-[#4b2e83]">
-                    overall {(rep.composite * 5).toFixed(1)} / 5
-                  </span>
+                  {anyDisclosable ? (
+                    <span className="rounded-full bg-[#efeaf7] px-3 py-1 text-xs font-semibold text-[#4b2e83]">
+                      overall {(rep.composite * 5).toFixed(1)} / 5
+                    </span>
+                  ) : (
+                    <span
+                      className="rounded-full bg-[#fff3d6] px-3 py-1 text-xs font-medium text-[#7a5b00]"
+                      title="k-anonymity: composite suppressed until at least one dimension has ≥5 ratings (across all PackPair events)"
+                    >
+                      gathering ratings · {totalN} of 15
+                    </span>
+                  )}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {DIMS.map((d) => {
@@ -170,7 +237,8 @@ export default async function ReputationPage({
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
