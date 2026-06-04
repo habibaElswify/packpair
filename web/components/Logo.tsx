@@ -1,8 +1,9 @@
 import React from "react";
+import Link from "next/link";
 
 export default function Logo() {
   return (
-    
+    <Link
       href="/"
       className="group flex items-center gap-2.5 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded-md"
       aria-label="PackPair home"
@@ -43,6 +44,6 @@ export default function Logo() {
           Pair
         </span>
       </span>
-    </a>
+    </Link>
   );
 }
