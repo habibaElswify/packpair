@@ -98,11 +98,22 @@ Tuning is documented and central, not hidden — each weight is justified:
 | 12 students | ~20 ms | Was ~120 ms with the Week 1 brute-force enumerator |
 | 30 students | ~10 s | Brute force infeasible past ~15 students |
 
-## Web app *(in progress)*
+## Web app
 
-The Next.js + Supabase + FastAPI vertical slice is being built out — see
-`/docs/roadmap.md` for the current sprint. The solver package above is the AI core that the
-web app will call.
+The Next.js 16 + Supabase + FastAPI stack is live at
+**<https://packpair.vercel.app>**. The solver package above is the AI core that
+the web app calls. See [`FINAL_SUBMISSION.md`](FINAL_SUBMISSION.md) for the
+grader-facing single-document write-up.
+
+## Access & security
+
+- **No password required.** Sign-in uses Google OAuth, gated to `@uw.edu` accounts
+  server-side. Any UW Google account can sign in; only Canvas-verified instructors
+  can create events; students join with an instructor-issued code.
+- **Public, no-login demo**: <https://packpair.vercel.app/demo> runs the real
+  CP-SAT solver on a fresh synthetic class on every click.
+- Instructor verification uses the user's own Canvas access token; PackPair never
+  stores it.
 
 ## Milestones
 
@@ -110,7 +121,7 @@ web app will call.
 | --- | --- | --- |
 | 1 | Proposal accepted (5/5), profile schema v1, hi-fi mockups, CSP prototype | ✅ |
 | 2 | CP-SAT integration, Bayesian reputation, k-anonymity guard, public repo, landing page | ✅ |
-| 3 | Vercel deployment of vertical slice, friend pilot, DYOP writeup, final demo | In progress |
+| 3 | Vercel/Render/Supabase three-tier deployment, Canvas integration, manual roster editing, real end-to-end test with Aasiya, CI pipeline, final demo | ✅ |
 
 ## License
 
