@@ -56,21 +56,34 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+_DEMO_NAMES = [
+    "Alex Chen", "Maya Patel", "Jordan Kim", "Sara Ahmed", "Diego Lopez",
+    "Priya Shah", "Ethan Wright", "Yuki Tanaka", "Noor Hassan", "Liam OBrien",
+    "Aria Rossi", "Zara Khan", "Sofia Garcia", "Omar Ali", "Hana Lee",
+    "Ravi Mehta", "Lina Park", "Theo Brown", "Iris Wong", "Kai Nguyen",
+    "Maya Singh", "Joon Park", "Layla Karim", "Marco Silva", "Yara Mansour",
+    "Ben Cohen", "Anika Roy", "Felix Mueller", "Tess Larsen", "Sami Reza",
+]
+
+
 @app.get("/demo/students")
 def demo_students(n: int = 12, seed: int = 7) -> dict:
     """Synthetic roster for seeding a Demo Class (testing + demo without
-    needing real signups). Reuses the same generator the solver tests use."""
+    needing real signups). Reuses the same generator the solver tests use,
+    but overrides the bare "S000" names with realistic-looking student names
+    so the public /demo page looks like a real class roster, not a stress
+    test."""
     pool = synthetic_pool(n, seed=seed)
     return {
         "students": [
             {
-                "name": s.name,
+                "name": _DEMO_NAMES[i] if i < len(_DEMO_NAMES) else s.name,
                 "skills": sorted(s.skills),
                 "availability": sorted(s.available),
                 "comm_style": s.comm_style,
                 "topics": sorted(s.topics),
             }
-            for s in pool
+            for i, s in enumerate(pool)
         ]
     }
 
