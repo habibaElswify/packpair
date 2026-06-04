@@ -33,8 +33,8 @@ export default async function InstructorPage() {
           need this; they just join with a code.
         </p>
 
-        {verified ? (
-          <div className="rounded-xl border border-[#cdeed7] bg-[#e6f4ea] p-5">
+        {verified && (
+          <div className="mb-6 rounded-xl border border-[#cdeed7] bg-[#e6f4ea] p-5">
             <div className="font-semibold text-[#1f7a3a]">
               You&apos;re verified as an instructor ✓
             </div>
@@ -45,9 +45,19 @@ export default async function InstructorPage() {
               + Create an event
             </Link>
           </div>
-        ) : (
-          <InstructorVerify />
         )}
+
+        <div className="rounded-xl border border-[#e6e1ef] bg-white p-5">
+          <h2 className="mb-1 font-semibold text-[#32235f]">
+            {verified ? "Re-test Canvas connection" : "Verify with Canvas"}
+          </h2>
+          <p className="mb-4 text-sm text-[#4a4a55]">
+            {verified
+              ? "You're already flagged as an instructor, but you can re-run the Canvas API check anytime to confirm the pipeline reports your Teacher/TA enrollments correctly."
+              : "Paste a Canvas access token to confirm your Teacher/TA role."}
+          </p>
+          <InstructorVerify />
+        </div>
       </section>
     </main>
   );
