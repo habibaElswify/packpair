@@ -613,6 +613,149 @@ export async function removeRosterMember(eventId: string, memberId: string) {
   revalidatePath(`/events/${eventId}`);
 }
 
+// Re-balance ONLY the affected teams when students dropped after teams
+// were formed. Preserves teams that still meet min_size; pulls the orphans
+// (students without a team) plus any sub-min teams' members into a fresh
+// solve. Never touches the rest of the class — so the working teams keep
+// their identity and the in-progress collaborations don't get scrambled.
+export async function reformAffectedTeams(eventId: string) {
+  const user = await requireUser();
+  const event = await requireOwner(eventId, user.id);
+  const admin = createAdminClient();
+
+  const targetSize = event.target_team_size ?? 3;
+  const minSize = event.min_size ?? Math.max(2, targetSize - 1);
+  const maxSize = event.max_size ?? targetSize + 1;
+
+  // Pull current state.
+  const { data: members } = await admin
+    .from("event_members")
+    .select("id, role")
+    .eq("event_id", eventId)
+    .eq("role", "student");
+  const { data: teams } = await admin
+    .from("teams")
+    .select("id, label")
+    .eq("event_id", eventId);
+  const { data: tms } = await admin
+    .from("team_members")
+    .select("team_id, member_id");
+  const { data: profiles } = await admin
+    .from("student_profiles")
+    .select("member_id, skills, availability, comm_style, topics")
+    .eq("event_id", eventId);
+
+  const memberIds = new Set((members ?? []).map((m) => m.id));
+  const profileByMember = new Map((profiles ?? []).map((p) => [p.member_id, p]));
+
+  // Which members are currently placed on a team that still exists?
+  const placed = new Map<string, string>(); // member_id -> team_id
+  for (const tm of tms ?? []) {
+    if (memberIds.has(tm.member_id)) placed.set(tm.member_id, tm.team_id);
+  }
+
+  // Identify teams that are now too small (someone dropped) and orphan
+  // members (rostered but on no team).
+  const teamSizes = new Map<string, number>();
+  for (const mid of placed.keys()) {
+    const t = placed.get(mid)!;
+    teamSizes.set(t, (teamSizes.get(t) ?? 0) + 1);
+  }
+  const subMinTeams = new Set<string>();
+  for (const [tid, sz] of teamSizes) {
+    if (sz < minSize) subMinTeams.add(tid);
+  }
+  // Teams referenced in team_members but not present in `teams` (orphan rows)
+  for (const t of teams ?? []) {
+    if (!teamSizes.has(t.id)) subMinTeams.add(t.id);
+  }
+
+  const orphans = [...memberIds].filter((m) => !placed.has(m));
+  const fromSubMin = [...placed.entries()]
+    .filter(([, tid]) => subMinTeams.has(tid))
+    .map(([mid]) => mid);
+  const affectedMembers = [...new Set([...orphans, ...fromSubMin])];
+
+  if (affectedMembers.length === 0) {
+    throw new Error(
+      "All teams meet the minimum size and every student is placed — nothing to re-form.",
+    );
+  }
+  if (affectedMembers.length < minSize) {
+    throw new Error(
+      `Only ${affectedMembers.length} affected student(s) — need at least ${minSize} to form a viable team. Add another student or use Form teams to re-solve the whole class.`,
+    );
+  }
+
+  // Drop the sub-min teams (and any orphan-only carry-over).
+  for (const tid of subMinTeams) {
+    await admin.from("team_members").delete().eq("team_id", tid);
+    await admin.from("teams").delete().eq("id", tid);
+  }
+
+  // Build solver payload only for the affected students.
+  const students: {
+    name: string;
+    skills: string[];
+    availability: number[];
+    comm_style: string;
+    topics: string[];
+  }[] = [];
+  for (const mid of affectedMembers) {
+    const p = profileByMember.get(mid);
+    students.push({
+      name: mid,
+      skills: (p?.skills as string[]) ?? [],
+      availability: (p?.availability as number[]) ?? Array.from({ length: 14 }, (_, i) => i),
+      comm_style: (p?.comm_style as string) ?? "mixed",
+      topics: (p?.topics as string[]) ?? [],
+    });
+  }
+
+  const res = await fetch(`${SOLVER}/match`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({
+      students,
+      target_size: targetSize,
+      remainder_policy: event.remainder_policy ?? "flexible_range",
+      min_size: minSize,
+      max_size: maxSize,
+    }),
+  });
+  if (!res.ok) throw new Error("Solver couldn't re-form the affected teams");
+  const result = (await res.json()) as {
+    teams: { members: string[]; score: number; rationale: Record<string, unknown> }[];
+  };
+
+  // Append new teams; pick labels that don't collide with the surviving ones.
+  const existingLabels = new Set(
+    (teams ?? []).filter((t) => !subMinTeams.has(t.id)).map((t) => t.label),
+  );
+  let n = 1;
+  for (const t of result.teams) {
+    let label = `Team R${n}`;
+    while (existingLabels.has(label)) {
+      n += 1;
+      label = `Team R${n}`;
+    }
+    existingLabels.add(label);
+    const { data: team } = await admin
+      .from("teams")
+      .insert({ event_id: eventId, label, score: t.score, rationale: t.rationale })
+      .select("id")
+      .single();
+    if (!team) continue;
+    await admin
+      .from("team_members")
+      .insert(t.members.map((mid) => ({ team_id: team.id, member_id: mid })));
+    n += 1;
+  }
+
+  revalidatePath(`/events/${eventId}`);
+}
+
 // Pre-flight roster anomaly check for instructors. Surfaces problems the
 // solver can't fix on its own (missing profiles, zero-availability students,
 // isolated comm-style outliers) BEFORE the teacher hits "Form teams" — so

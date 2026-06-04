@@ -9,6 +9,7 @@ import {
   setEventState,
   simulateRatings,
   deleteEvent,
+  reformAffectedTeams,
 } from "@/app/actions";
 
 export function TeacherControls({
@@ -97,6 +98,16 @@ export function TeacherControls({
             className={btn}
           >
             {busy === "open" ? "Opening…" : "Open peer review"}
+          </button>
+        )}
+        {hasTeams && (
+          <button
+            disabled={pending}
+            onClick={() => run("reform", () => reformAffectedTeams(eventId))}
+            className={btn}
+            title="If students dropped or joined late, re-solve ONLY the affected teams — surviving teams keep their identity."
+          >
+            {busy === "reform" ? "Re-forming…" : "↻ Re-form affected teams"}
           </button>
         )}
         {hasTeams && isAppAdmin && (

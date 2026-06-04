@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-04T05:07:38Z",
+  "generated_at": "2026-06-04T05:15:51Z",
   "note": "PackPair solver microbench. CP-SAT exact solve below ~40 students; greedy heuristic above (CP-SAT OOMs Render free tier ~75).",
   "runs": [
     {
@@ -7,7 +7,7 @@
       "n_teams": 4,
       "all_placed": true,
       "score": 261,
-      "elapsed_ms": 22.7,
+      "elapsed_ms": 21.5,
       "algorithm": "cpsat"
     },
     {
@@ -15,7 +15,7 @@
       "n_teams": 9,
       "all_placed": true,
       "score": 617,
-      "elapsed_ms": 1983.3,
+      "elapsed_ms": 1974.6,
       "algorithm": "cpsat"
     },
     {
@@ -39,8 +39,20 @@
       "n_teams": 40,
       "all_placed": true,
       "score": 3438,
-      "elapsed_ms": 5.5,
+      "elapsed_ms": 5.6,
       "algorithm": "greedy"
     }
-  ]
+  ],
+  "ab_same_problem": {
+    "n_students": 18,
+    "cpsat": {
+      "score": 617,
+      "elapsed_ms": 1998.2
+    },
+    "greedy": {
+      "score": 444,
+      "elapsed_ms": 0.2
+    },
+    "cpsat_score_uplift_pct": 39.0
+  }
 }
