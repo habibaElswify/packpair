@@ -43,6 +43,22 @@ async function requireOwner(eventId: string, userId: string) {
   return data;
 }
 
+// Used to gate the synthetic-data shortcuts ("Seed demo students",
+// "Simulate demo ratings") so only the platform owner sees them. Real
+// instructors using PackPair for their own class should not see those
+// shortcuts on their event pages.
+async function requireAppAdmin(userId: string) {
+  const admin = createAdminClient();
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("is_app_admin")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!prof?.is_app_admin) {
+    throw new Error("Admin-only action");
+  }
+}
+
 export async function createEvent(formData: FormData) {
   const user = await requireUser();
   const admin = createAdminClient();
@@ -101,6 +117,7 @@ export async function createEvent(formData: FormData) {
 export async function seedDemoStudents(eventId: string, n = 12) {
   const user = await requireUser();
   await requireOwner(eventId, user.id);
+  await requireAppAdmin(user.id);
   const admin = createAdminClient();
 
   const res = await fetch(`${SOLVER}/demo/students?n=${n}`, {
@@ -504,6 +521,7 @@ async function regenerateTeammateRatings(
 export async function simulateRatings(eventId: string) {
   const user = await requireUser();
   await requireOwner(eventId, user.id);
+  await requireAppAdmin(user.id);
   await regenerateTeammateRatings(createAdminClient(), eventId);
   revalidatePath(`/events/${eventId}/reputation`);
 }

@@ -34,6 +34,16 @@ export default async function EventPage({
 
   const isOwner = event.owner_id === user.id;
 
+  // Demo shortcuts (Seed students, Simulate ratings) are admin-only — real
+  // instructors using the platform shouldn't see synthetic-data buttons on
+  // their own event pages.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_app_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isAppAdmin = !!profile?.is_app_admin;
+
   const { data: members } = await supabase
     .from("event_members")
     .select("id, roster_name, roster_email, role, user_id")
@@ -88,6 +98,7 @@ export default async function EventPage({
             studentCount={students.length}
             state={event.state}
             hasTeams={(teams?.length ?? 0) > 0}
+            isAppAdmin={isAppAdmin}
           />
         )}
 

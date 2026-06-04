@@ -16,11 +16,13 @@ export function TeacherControls({
   studentCount,
   state,
   hasTeams,
+  isAppAdmin,
 }: {
   eventId: string;
   studentCount: number;
   state: string;
   hasTeams: boolean;
+  isAppAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -67,13 +69,16 @@ export function TeacherControls({
     <div className="rounded-xl border border-[#e6e1ef] bg-white p-5">
       <h2 className="mb-3 font-semibold text-[#32235f]">Instructor controls</h2>
       <div className="flex flex-wrap gap-3">
-        <button
-          disabled={pending}
-          onClick={() => run("seed", () => seedDemoStudents(eventId, 12))}
-          className={btn}
-        >
-          {busy === "seed" ? "Seeding…" : "Seed 12 demo students"}
-        </button>
+        {isAppAdmin && (
+          <button
+            disabled={pending}
+            onClick={() => run("seed", () => seedDemoStudents(eventId, 12))}
+            className={btn}
+            title="Admin-only: seed synthetic students for testing"
+          >
+            {busy === "seed" ? "Seeding…" : "Seed 12 demo students"}
+          </button>
+        )}
         <Link href={`/events/${eventId}/canvas`} className={btn}>
           Import from Canvas
         </Link>
@@ -94,11 +99,12 @@ export function TeacherControls({
             {busy === "open" ? "Opening…" : "Open peer review"}
           </button>
         )}
-        {hasTeams && (
+        {hasTeams && isAppAdmin && (
           <button
             disabled={pending}
             onClick={() => run("sim", () => simulateRatings(eventId))}
             className={btn}
+            title="Admin-only: replaces real peer ratings with synthetic ones"
           >
             {busy === "sim" ? "Simulating…" : "Simulate demo ratings"}
           </button>
